@@ -21,5 +21,9 @@
     { "lang": "en", "name": "English", "path": "lang/en.json" },
     { "lang": "es", "name": "Español", "path": "lang/es.json" }
   ],
+  "url": "https://github.com/kiryna-cpg/conan2d20-miniqol",
+  "manifest": "https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json",
+  "download": "https://github.com/kiryna-cpg/conan2d20-miniqol/releases/download/0.0.2/conan2d20-miniqol.zip",
+  "bugs": "https://github.com/kiryna-cpg/conan2d20-miniqol/issues",
   "license": "MIT"
 }
