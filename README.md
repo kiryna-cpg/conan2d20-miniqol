@@ -39,19 +39,21 @@ This module focuses on **combat damage workflow**: roll damage from chat, apply 
 
 ### Install via Manifest URL (recommended)
 
-1. Foundry → **Add-on Modules** → **Install Module**
+1. Foundry → Add-on Modules → Install Module
 2. Paste this Manifest URL:
-```txt
-https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json
+   - https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json
 3. Install, then enable it in your world:
-- World → Manage Modules → enable “Conan 2d20: Mini QoL”
+   - World → Manage Modules → enable “Conan 2d20: Mini QoL”
 4. Reload Application
 
 ---
 
 ## What this module automates
+
 ### Chat workflow
-- For successful rolls where the system provides item damage data:
+
+For successful rolls where the system provides item damage data:
+
 - Roll damage from chat (Combat Dice)
 - Apply damage to selected targets
 - Undo damage per target
@@ -60,7 +62,9 @@ https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json
 ---
 
 ## Settings
+
 World Settings → **Conan 2d20: Mini QoL**
+
 - Auto-roll damage
 - Auto-apply damage (single target)
 - Use Hit Location
@@ -72,14 +76,17 @@ World Settings → **Conan 2d20: Mini QoL**
 ---
 
 ## Support / Issues
+
 Report issues or request improvements here:
-```txt
-https://github.com/kiryna-cpg/conan2d20-miniqol/issues
+
+- https://github.com/kiryna-cpg/conan2d20-miniqol/issues
 
 When reporting, include:
+
 - Foundry version
 - Conan 2d20 system version
 - Steps to reproduce + console logs (F12)
 
 ## License
+
 MIT. See LICENSE.
