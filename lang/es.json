@@ -1,0 +1,86 @@
+{
+  "C2MQ": {
+    "Info": {
+      "FallbackMode": "MiniQoL: modo fallback (sin flags aún). Pulsa Tirar Daño para inicializar."
+    },
+    
+    "Label": {
+      "Damage": "Daño",
+      "Targets": "Objetivos",
+      "HitLocation": "Localización"
+    },
+    "Button": {
+      "RollDamage": "Tirar Daño",
+      "Apply": "Aplicar",
+      "Undo": "Deshacer",
+      "ApplyAll": "Aplicar a Todos",
+      "UseCurrentTargets": "Usar objetivos actuales"
+    },
+    "Status": {
+      "Pending": "Pendiente",
+      "Applied": "Aplicado",
+      "NoGuard": "Sin Guardia"
+    },
+    "Warn": {
+      "DamageSpecMissing": "No se han encontrado datos de daño en este item (v0.1).",
+      "TargetMissing": "No se ha encontrado el token/actor objetivo.",
+      "NoTargetsCaptured": "No se capturaron objetivos para este ataque. Selecciona objetivos ahora y pulsa el botón."
+    },
+    "Err": {
+      "StressPathMissing": "No se ha encontrado el campo de Stress en este actor (mira la consola con Debug)."
+    },
+    "Dialog": {
+      "Undo": {
+        "Title": "Deshacer Daño",
+        "Content": "¿Deshacer el daño para este objetivo?"
+      },
+      "Sacrificial": {
+        "Title": "Armadura Sacrificable",
+        "Content": "¿Usar Armadura Sacrificable para ignorar 1 Herida (una vez por escena)?"
+      }
+    },
+
+    "Reach": {
+      "NoteNoTarget": "Reach: selecciona un objetivo para previsualizar los ajustes.",
+      "NoteMultiTarget": "Reach: hay múltiples objetivos; no se ajusta la Dificultad automáticamente.",
+      "NoteNoGuard": "Reach: el objetivo está Sin Guardia; no hay penalizador (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
+      "NoteNoChange": "Reach: sin ajuste (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
+      "NotePreview": "Reach: aumentaría la Dificultad en +{delta} (Reach atacante {attackerReach}, Reach defensor {defenderReach}). D{base} → D{next}.",
+      "NoteApplied": "Reach: aplicado +{delta} a la Dificultad (Reach atacante {attackerReach}, Reach defensor {defenderReach}). D{base} → D{next}."
+    },
+    "Setting": {
+      "AutoRollDamage": {
+        "Name": "Auto-tirar daño",
+        "Hint": "Tira el daño automáticamente al crearse el mensaje de ataque."
+      },
+      "AutoApplyDamage": {
+        "Name": "Auto-aplicar daño (un solo objetivo)",
+        "Hint": "Aplica el daño automáticamente si había exactamente un objetivo seleccionado."
+      },
+      "AutoReachDifficulty": {
+        "Name": "Ajustar Dificultad por Reach",
+        "Hint": "En ataques con Reach (cuerpo a cuerpo), aumenta la Dificultad por la diferencia de Reach contra el objetivo (Reach/Guard RAW)."
+      },
+      "HitLocationEnabled": {
+        "Name": "Usar localización de impacto",
+        "Hint": "Tira y guarda la localización por objetivo (se usará más en versiones posteriores)."
+      },
+      "SacrificialArmorEnabled": {
+        "Name": "Activar Armadura Sacrificable",
+        "Hint": "Ofrece un prompt para ignorar 1 Herida una vez por escena (v0.1 simplificado)."
+      },
+      "AllowPlayersRequestApply": {
+        "Name": "Permitir a jugadores solicitar Aplicar/Deshacer",
+        "Hint": "Los jugadores pueden pulsar Aplicar/Deshacer; ejecución GM-first por socket."
+      },
+      "ShowApplyAll": {
+        "Name": "Mostrar 'Aplicar a Todos'",
+        "Hint": "Muestra 'Aplicar a Todos' cuando existan múltiples objetivos."
+      },
+      "Debug": {
+        "Name": "Logs de depuración",
+        "Hint": "Escribe información extra en consola para afinar paths de actor/item."
+      }
+    }
+  }
+}

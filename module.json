@@ -1,0 +1,25 @@
+{
+  "id": "conan2d20-miniqol",
+  "title": "Conan 2d20 - Mini QoL",
+  "description": "Mini QoL automation for Conan 2d20 combat: damage roll/apply/undo from chat.",
+  "version": "0.0.2",
+  "authors": [{ "name": "Kiryna" }],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13.351"
+  },
+  "relationships": {
+    "systems": [{ "id": "conan2d20", "type": "system" }]
+  },
+  "esmodules": [
+    "scripts/module.js"
+  ],
+  "styles": [
+    "styles/module.css"
+  ],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" },
+    { "lang": "es", "name": "Español", "path": "lang/es.json" }
+  ],
+  "license": "MIT"
+}

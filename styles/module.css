@@ -1,0 +1,97 @@
+.c2d20-miniqol {
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.c2mq-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.c2mq-left, .c2mq-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.c2mq-label {
+  font-weight: 600;
+}
+
+.c2mq-muted {
+  opacity: 0.75;
+  font-size: 0.9em;
+}
+
+.c2mq-btn {
+  padding: 2px 6px;
+  line-height: 1.2;
+  font-size: 0.9em;
+}
+
+.c2mq-target-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.c2mq-target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px dashed var(--color-border-light-2);
+  border-radius: 6px;
+}
+
+.c2mq-target-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.c2mq-target-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.c2mq-status {
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-light-2);
+  font-size: 0.85em;
+}
+
+.c2mq-status.pending {
+  opacity: 0.8;
+}
+
+.c2mq-status.applied {
+  font-weight: 700;
+}
+
+.c2mq-empty-targets {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px dashed var(--color-border-light-2);
+  border-radius: 6px;
+  margin-top: 4px;
+}
+.c2mq-reach-note {
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-left: 3px solid var(--color-border-light-2);
+  opacity: 0.85;
+  font-size: 0.9em;
+}

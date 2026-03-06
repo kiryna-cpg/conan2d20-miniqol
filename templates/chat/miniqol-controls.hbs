@@ -1,0 +1,81 @@
+<div class="c2d20-miniqol" data-message-id="{{messageId}}">
+  {{#if isFallback}}
+  <div class="c2mq-muted" style="margin-bottom:4px;">
+    {{localize "C2MQ.Info.FallbackMode"}}
+  </div>
+{{/if}}
+  <div class="c2mq-row c2mq-damage">
+    <div class="c2mq-left">
+      <span class="c2mq-label">{{localize "C2MQ.Label.Damage"}}:</span>
+      {{#if damage.rolled}}
+        <span class="c2mq-value">{{damage.total}}</span>
+        <span class="c2mq-muted">({{damage.dice}}§{{#if damage.static}}+{{damage.static}}{{/if}})</span>
+      {{else}}
+        <span class="c2mq-muted">—</span>
+      {{/if}}
+    </div>
+
+    <div class="c2mq-right">
+      <button type="button" class="c2mq-btn"
+        data-action="roll-damage"
+        {{#if damage.rolled}}disabled{{/if}}
+        {{#unless canRollDamage}}disabled{{/unless}}>
+        {{localize "C2MQ.Button.RollDamage"}}
+      </button>
+    </div>
+  </div>
+
+  {{#if damage.rolled}}
+    <div class="c2mq-row c2mq-targets">
+      <span class="c2mq-label">{{localize "C2MQ.Label.Targets"}}:</span>
+    </div>
+
+{{#if hasTargets}}
+    <div class="c2mq-target-list">
+      {{#each targetRows}}
+        <div class="c2mq-target" data-target-uuid="{{this.tokenUuid}}">
+          <div class="c2mq-target-main">
+            <span class="c2mq-target-name">{{this.name}}</span>
+            {{#if this.hitLocationLabel}}
+              <span class="c2mq-muted">{{this.hitLocationLabel}}</span>
+            {{/if}}
+          </div>
+
+          <div class="c2mq-target-actions">
+            <span class="c2mq-status {{this.statusClass}}">{{this.statusLabel}}</span>
+
+            {{#if this.canApply}}
+              <button type="button" class="c2mq-btn" data-action="apply" data-target-uuid="{{this.tokenUuid}}">
+                {{localize "C2MQ.Button.Apply"}}
+              </button>
+            {{/if}}
+
+            {{#if this.canUndo}}
+              <button type="button" class="c2mq-btn" data-action="undo" data-target-uuid="{{this.tokenUuid}}">
+                {{localize "C2MQ.Button.Undo"}}
+              </button>
+            {{/if}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="c2mq-empty-targets">
+      <span class="c2mq-muted">{{localize "C2MQ.Warn.NoTargetsCaptured"}}</span>
+      {{#if canSetTargets}}
+        <button type="button" class="c2mq-btn" data-action="set-targets">
+          {{localize "C2MQ.Button.UseCurrentTargets"}}
+        </button>
+      {{/if}}
+    </div>
+  {{/if}}
+
+    {{#if showApplyAll}}
+      <div class="c2mq-row c2mq-apply-all">
+        <button type="button" class="c2mq-btn" data-action="apply-all">
+          {{localize "C2MQ.Button.ApplyAll"}}
+        </button>
+      </div>
+    {{/if}}
+  {{/if}}
+</div>

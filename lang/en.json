@@ -1,0 +1,86 @@
+{
+  "C2MQ": {
+    "Info": {
+      "FallbackMode": "MiniQoL: fallback mode (no flags yet). Click Roll Damage to initialize."
+    },
+    
+    "Label": {
+      "Damage": "Damage",
+      "Targets": "Targets",
+      "HitLocation": "Hit Location"
+    },
+    "Button": {
+      "RollDamage": "Roll Damage",
+      "Apply": "Apply",
+      "Undo": "Undo",
+      "ApplyAll": "Apply All",
+      "UseCurrentTargets": "Use current targets"
+    },
+    "Status": {
+      "Pending": "Pending",
+      "Applied": "Applied",
+      "NoGuard": "No Guard"
+    },
+    "Warn": {
+      "DamageSpecMissing": "Damage data not found on this item yet (v0.1).",
+      "TargetMissing": "Target token/actor not found.",
+      "NoTargetsCaptured": "No targets were captured for this attack. Select targets now and click the button."
+    },
+    "Err": {
+      "StressPathMissing": "Cannot find the Stress field on this actor (check debug logs)."
+    },
+    "Dialog": {
+      "Undo": {
+        "Title": "Undo Damage",
+        "Content": "Undo damage for this target?"
+      },
+      "Sacrificial": {
+        "Title": "Sacrificial Armor",
+        "Content": "Use Sacrificial Armor to ignore 1 Wound (once per scene)?"
+      }
+    },
+
+    "Reach": {
+      "NoteNoTarget": "Reach: select a target to preview reach adjustments.",
+      "NoteMultiTarget": "Reach: multiple targets selected; no automatic difficulty adjustment.",
+      "NoteNoGuard": "Reach: target has No Guard; no penalty (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
+      "NoteNoChange": "Reach: no adjustment (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
+      "NotePreview": "Reach: would increase Difficulty by +{delta} (attacker Reach {attackerReach}, defender Reach {defenderReach}). Current D{base} → D{next}.",
+      "NoteApplied": "Reach: applied +{delta} Difficulty (attacker Reach {attackerReach}, defender Reach {defenderReach}). D{base} → D{next}."
+    },
+    "Setting": {
+      "AutoRollDamage": {
+        "Name": "Auto-roll damage",
+        "Hint": "Automatically roll damage when an attack chat message is created."
+      },
+      "AutoApplyDamage": {
+        "Name": "Auto-apply damage (single target)",
+        "Hint": "Automatically apply damage if exactly one target was selected."
+      },
+      "AutoReachDifficulty": {
+        "Name": "Auto-adjust Difficulty for Reach",
+        "Hint": "When using a Reach-based attack (melee), increase Difficulty by the reach difference vs the selected target (RAW Reach/Guard)."
+      },
+      "HitLocationEnabled": {
+        "Name": "Use Hit Location",
+        "Hint": "Roll and store hit location per target (used for soak in later versions)."
+      },
+      "SacrificialArmorEnabled": {
+        "Name": "Enable Sacrificial Armor",
+        "Hint": "Offer a prompt to ignore 1 Wound once per scene (v0.1 simplified)."
+      },
+      "AllowPlayersRequestApply": {
+        "Name": "Allow players to request Apply/Undo",
+        "Hint": "Players can click Apply/Undo; execution is GM-first via socket."
+      },
+      "ShowApplyAll": {
+        "Name": "Show Apply All",
+        "Hint": "Show an Apply All button when multiple targets exist."
+      },
+      "Debug": {
+        "Name": "Debug logging",
+        "Hint": "Log extra info to the browser console to help refine actor/item paths."
+      }
+    }
+  }
+}
