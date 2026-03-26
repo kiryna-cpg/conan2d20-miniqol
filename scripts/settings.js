@@ -19,6 +19,15 @@ export function registerSettings() {
     default: false
   });
 
+  game.settings.register(MODULE_ID, SETTING_KEYS.PROMPT_BREAK_GUARD, {
+    name: game.i18n.localize("C2MQ.Setting.PromptBreakGuard.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.PromptBreakGuard.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, SETTING_KEYS.AUTO_REACH_DIFFICULTY, {
     name: game.i18n.localize("C2MQ.Setting.AutoReachDifficulty.Name"),
     hint: game.i18n.localize("C2MQ.Setting.AutoReachDifficulty.Hint"),
@@ -44,6 +53,15 @@ export function registerSettings() {
     config: true,
     type: Boolean,
     default: true
+  });
+
+  game.settings.register(MODULE_ID, SETTING_KEYS.AUTO_PROTECT_REACTION, {
+    name: game.i18n.localize("C2MQ.Setting.AutoProtectReaction.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.AutoProtectReaction.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
   });
 
   game.settings.register(MODULE_ID, SETTING_KEYS.ALLOW_PLAYERS_REQUEST_APPLY, {
@@ -72,4 +90,13 @@ export function registerSettings() {
     type: Boolean,
     default: false
   });
+
+  game.settings.register(MODULE_ID, SETTING_KEYS.SACRIFICIAL_WEAPONS_ENABLED, {
+  name: game.i18n.localize("C2MQ.Setting.SacrificialWeapons.Name"),
+  hint: game.i18n.localize("C2MQ.Setting.SacrificialWeapons.Hint"),
+  scope: "world",
+  config: true,
+  type: Boolean,
+  default: false
+});
 }

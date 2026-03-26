@@ -1,49 +1,209 @@
 {
   "C2MQ": {
     "Info": {
-      "FallbackMode": "MiniQoL: modo fallback (sin flags aún). Pulsa Tirar Daño para inicializar."
-    },
-    
+      "FallbackMode": "MiniQoL: modo fallback (sin flags todavía). Pulsa Roll Damage para inicializar.",
+      "SacrificialArmorCoverageLost": "{item} pierde la cobertura en {location}.",
+      "SacrificialArmorBroken": "{item} pierde la cobertura en {location} y ahora queda Rota.",
+      "SacrificialShieldBroken": "{item} se sacrifica y ahora queda Roto.",
+      "SacrificialWeaponBroken": "{item} se sacrifica y ahora queda Rota."
+    },    
     "Label": {
       "Damage": "Daño",
       "Targets": "Objetivos",
-      "HitLocation": "Localización"
+      "HitLocation": "Localización",
+      "DamageDetails": "Detalle del daño",
+      "DamageType": "Tipo de daño",
+      "MomentumSpends": "Gastos de Momentum",
+      "NumberOfDice": "Número de dados",
+      "Effects": "Efectos"
     },
     "Button": {
-      "RollDamage": "Tirar Daño",
+      "RollDamage": "Tirar daño",
       "Apply": "Aplicar",
       "Undo": "Deshacer",
-      "ApplyAll": "Aplicar a Todos",
-      "UseCurrentTargets": "Usar objetivos actuales"
+      "ApplyAll": "Aplicar a todos",
+      "UseCurrentTargets": "Usar objetivos actuales",
+      "RemoveTarget": "Quitar objetivo",
+      "SelectDeselectTargets": "Seleccionar/Deseleccionar objetivos",
+      "BreakGuard": "Romper Guardia",
+      "BreakGuardHint": "Gastar 2 Momentum para aplicar Guardia Rota a este objetivo",
+      "Defend": "Defender",
+      "Decline": "Rechazar"
+    },
+    "Tag": {
+      "Piercing": "Penetrante {value}",
+      "BonusDamage": "Daño extra +{value}",
+      "Intense": "Intenso",
+      "Nonlethal": "No letal"
+    },    
+    "DamageType": {
+      "Physical": "Físico",
+      "Mental": "Mental"
+    },
+    "MomentumSpend": {
+      "BonusDamage": {
+        "Cost": "1+",
+        "Title": "Daño adicional",
+        "Detail": "Añade +1 de daño por cada punto de Momentum gastado al ataque actual."
+      },
+      "BreakGuard": {
+        "Cost": "2",
+        "Title": "Romper Guardia",
+        "Detail": "En un ataque o una reacción de Defensa, el objetivo pierde la Guardia."
+      },
+      "CalledShot": {
+        "Cost": "2",
+        "Title": "Ataque localizado",
+        "Detail": "Elige la localización impactada por un ataque físico."
+      },
+      "ChangeStance": {
+        "Cost": "1",
+        "Title": "Cambiar postura",
+        "Detail": "Quedarte tumbado o levantarte."
+      },
+      "Confidence": {
+        "Cost": "1+",
+        "Title": "Confianza",
+        "Detail": "Gana 1§ de Soak de Moral por cada Momentum gastado hasta el inicio del siguiente turno."
+      },
+      "Disarm": {
+        "Cost": "2–3",
+        "Title": "Desarmar",
+        "Detail": "Hace caer un arma del objetivo. Cuesta 2 si es a una mano, 3 si está braceada o se empuña a dos manos."
+      },
+      "Penetration": {
+        "Cost": "1+",
+        "Title": "Penetración",
+        "Detail": "Ignora 2 puntos de Soak por cada Momentum gastado en el ataque actual."
+      },
+      "ReRollDamage": {
+        "Cost": "1",
+        "Title": "Repetir daño",
+        "Detail": "Vuelve a tirar cualquier número de dados de daño del ataque actual."
+      },
+      "SecondWind": {
+        "Cost": "1+",
+        "Title": "Segundo aliento",
+        "Detail": "Recupera inmediatamente 1 punto por cada Momentum gastado en la capacidad elegida."
+      },
+      "SecondaryTarget": {
+        "Cost": "2",
+        "Title": "Objetivo secundario",
+        "Detail": "Un segundo objetivo dentro de Reach del objetivo principal también se ve afectado y sufre la mitad del daño."
+      },
+      "Subdue": {
+        "Cost": "1",
+        "Title": "Someter",
+        "Detail": "El ataque gana la cualidad No letal."
+      },
+      "SwiftAction": {
+        "Cost": "2",
+        "Title": "Acción rápida",
+        "Detail": "Gana una Acción Estándar adicional. Cualquier tirada asociada aumenta en un paso su dificultad."
+      },
+      "Withdraw": {
+        "Cost": "1",
+        "Title": "Retirarse",
+        "Detail": "Abandonas el Reach de un enemigo sin disparar Retaliate."
+      }
     },
     "Status": {
       "Pending": "Pendiente",
       "Applied": "Aplicado",
-      "NoGuard": "Sin Guardia"
+      "NoGuard": "Guardia Rota"
     },
     "Warn": {
-      "DamageSpecMissing": "No se han encontrado datos de daño en este item (v0.1).",
+      "DamageSpecMissing": "No se han encontrado aún datos de daño en este objeto (v0.1).",
       "TargetMissing": "No se ha encontrado el token/actor objetivo.",
-      "NoTargetsCaptured": "No se capturaron objetivos para este ataque. Selecciona objetivos ahora y pulsa el botón."
+      "DefenseSkillUnavailable": "MiniQoL aún no puede determinar de forma fiable la skill defensiva nativa correcta para este actor.",
+      "DoomTrackerUnavailable": "MiniQoL no ha podido encontrar el tracker de Doom del sistema en el DOM.",
+      "NoTargetsCaptured": "No hay objetivos sincronizados para este ataque. Selecciona o deselecciona objetivos en el lienzo y luego pulsa el botón de objetivo.",
+      "NoSacrificialCandidates": "No se ha encontrado armadura/escudo/arma equipado, intacto y sacrificable."
     },
+
+    "DamageRoller": {
+      "Title": "Tirar Daño",
+      "AttackType": {
+        "Label": "Tipo de ataque",
+        "Melee": "Cuerpo a cuerpo",
+        "Ranged": "A distancia",
+        "Threaten": "Amenazar"
+      },
+      "CombatDice": "Dados de combate",
+      "Reloads": "Recargas",
+      "NoReloads": "--- No hay recargas disponibles ---",
+      "BonusDice": "Dados adicionales",
+      "Bonus": {
+        "Other": "Otros",
+        "Talent": "Talento"
+      },
+      "BonusDamage": "Daño adicional",
+      "Spend": {
+        "Doom": "Doom",
+        "Momentum": "Momentum"
+      },
+      "RollDice": "Tirar Dados"
+    },
+
     "Err": {
       "StressPathMissing": "No se ha encontrado el campo de Stress en este actor (mira la consola con Debug)."
     },
+    "Reaction": {
+      "Defend": {
+        "Available": "Defensa disponible",
+        "Pending": "Defensa pendiente",
+        "Declined": "Defensa rechazada",
+        "ResolvedMiss": "Defensa resuelta: el ataque falla",
+        "ResolvedHit": "Defensa resuelta: el ataque impacta"
+      },
+      "Protect": {
+        "Available": "Reacción Proteger disponible",
+        "Pending": "Reacción Proteger pendiente",
+        "Declined": "Reacción Proteger rechazada",
+        "ResolvedMiss": "Reacción Proteger resuelta: el ataque falla",
+        "ResolvedHit": "Reacción Proteger: el protegido es golpeado",
+        "ResolvedFailed": "Reacción Proteger falla: el objetivo original es golpeado"
+      }
+    },   
     "Dialog": {
       "Undo": {
-        "Title": "Deshacer Daño",
+        "Title": "Undo Damage",
         "Content": "¿Deshacer el daño para este objetivo?"
       },
-      "Sacrificial": {
-        "Title": "Armadura Sacrificable",
-        "Content": "¿Usar Armadura Sacrificable para ignorar 1 Herida (una vez por escena)?"
+      "Defend": {
+        "Title": "Defender",
+        "Content": "<strong>{defender}</strong> puede Defenderse frente a este ataque de tipo <strong>{attackType}</strong>. Esta reacción cuesta ahora mismo <strong>{cost}</strong> de Perdición. ¿Abrir la tirada defensiva nativa?"
+      },
+      "Protect": {
+        "Title": "Proteger",
+        "Content": "<strong>{protector}</strong> puede Proteger a <strong>{target}</strong> contra este ataque de tipo <strong>{attackType}</strong>. Esta reacción cuesta ahora mismo <strong>{cost}</strong> Perdición y tiene dificultad <strong>D2</strong>. ¿Abrir la tirada defensiva nativa?"
+      },
+      "Retaliate": {
+        "Title": "Represalia",
+        "Content": "<strong>{retaliator}</strong> puede realizar una Represalia contra <strong>{target}</strong> usando <strong>{weapon}</strong>. Esta reacción cuesta ahora mismo <strong>{cost}</strong> de Perdición. ¿Abrir el ataque cuerpo a cuerpo nativo?"
+      },
+    "Sacrificial": {
+      "Title": "Sacrificar Equipo",
+      "Content": "¿Sacrificas una pieza de tu equipo para ignorar 1 Herida (una vez por escena)?",
+      "SelectLabel": "Elige qué equipo sacrificar",
+      "ButtonSacrifice": "Sacrificar",
+      "ButtonCancel": "No sacrificar",
+      "Kind": {
+        "Armor": "Armadura",
+        "Shield": "Escudo",
+        "Weapon": "Arma"
+      }
+    },
+      "BreakGuard": {
+        "Title": "Romper Guardia",
+        "Content": "¿Gastar 2 Momentum para Romper Guardia en <strong>{name}</strong>? (El objetivo pierde Guardia)"
       }
     },
 
     "Reach": {
       "NoteNoTarget": "Reach: selecciona un objetivo para previsualizar los ajustes.",
       "NoteMultiTarget": "Reach: hay múltiples objetivos; no se ajusta la Dificultad automáticamente.",
-      "NoteNoGuard": "Reach: el objetivo está Sin Guardia; no hay penalizador (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
+      "NoteNoGuard": "Reach: el objetivo tiene Guardia Rota; no hay penalizador (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
       "NoteNoChange": "Reach: sin ajuste (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
       "NotePreview": "Reach: aumentaría la Dificultad en +{delta} (Reach atacante {attackerReach}, Reach defensor {defenderReach}). D{base} → D{next}.",
       "NoteApplied": "Reach: aplicado +{delta} a la Dificultad (Reach atacante {attackerReach}, Reach defensor {defenderReach}). D{base} → D{next}."
@@ -69,6 +229,10 @@
         "Name": "Activar Armadura Sacrificable",
         "Hint": "Ofrece un prompt para ignorar 1 Herida una vez por escena (v0.1 simplificado)."
       },
+      "AutoProtectReaction": {
+        "Name": "Reacción automática de Proteger",
+        "Hint": "Si está activado, MiniQoL ofrecerá automáticamente Proteger tras una Defensa fallida o rechazada. Si está desactivado, Proteger se gestiona manualmente."
+      },
       "AllowPlayersRequestApply": {
         "Name": "Permitir a jugadores solicitar Aplicar/Deshacer",
         "Hint": "Los jugadores pueden pulsar Aplicar/Deshacer; ejecución GM-first por socket."
@@ -80,6 +244,14 @@
       "Debug": {
         "Name": "Logs de depuración",
         "Hint": "Escribe información extra en consola para afinar paths de actor/item."
+      },
+      "PromptBreakGuard": {
+        "Name": "Mostrar helper de Romper Guardia (2 Momentum)",
+        "Hint": "Tras un impacto exitoso que genere 2+ Momentum, muestra un helper inline de Romper Guardia en la tarjeta del ataque en lugar de abrir un popup."
+      },
+      "SacrificialWeapons": {
+        "Name": "Permitir Sacrificar Armas (homebrew)",
+        "Hint": "Si está activo, la regla de Armadura Sacrificial también puede romper un arma equipada si no hay armadura/escudo disponible."
       }
     }
   }

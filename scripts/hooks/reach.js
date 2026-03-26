@@ -1,14 +1,7 @@
-import { MODULE_ID, SETTING_KEYS } from "../constants.js";
+import { MODULE_ID, SETTING_KEYS, HOOK_NAMES } from "../constants.js";
 import { computeActorReach, readItemReach, debugEnabled } from "../adapter/conan2d20.js";
 
 let _reachHooksRegistered = false;
-
-function getRootEl(html) {
-  if (!html) return null;
-  if (html instanceof HTMLElement) return html;
-  if (html?.[0] instanceof HTMLElement) return html[0];
-  return null;
-}
 
 function clampDifficulty(d) {
   const n = Number(d);
@@ -28,43 +21,14 @@ function setDifficulty(root, d) {
   if (btn && !btn.classList.contains("active")) btn.click();
 }
 
-function inferItemFromApp(app, data) {
-  // Try the most likely places for system apps.
-  const actorId = data?.rollData?.actorId ?? data?.actorId ?? app?.actor?.id ?? app?.object?.actor?.id ?? null;
-  const itemId = data?.rollData?.item?._id ?? data?.item?._id ?? data?.itemId ?? app?.item?.id ?? null;
-
-  const actor = actorId ? (game.actors?.get(actorId) ?? null) : (app?.actor ?? null);
-  const item = (actor && itemId) ? (actor.items?.get(itemId) ?? null) : (app?.item ?? null);
-
-  if (item) return item;
-
-  // Fallback: parse Reach X from the "test-details" text.
-  const details = data?.difficulty?.display ?? rootText(app) ?? "";
-  const mm = String(details).match(/\bReach\s*(\d+)\b/i);
-  if (mm?.[1]) {
-    return { system: { range: Number(mm[1]) } };
-  }
-
-  return null;
-}
-
-function rootText(app) {
-  try {
-    const el = app?.element?.[0] ?? app?.element;
-    if (!el) return "";
-    return el.textContent ?? "";
-  } catch (_e) {
-    return "";
-  }
-}
-
 function collectTargets() {
-  return Array.from(game.user?.targets ?? []).map(t => t.actor).filter(Boolean);
+  return Array.from(game.user?.targets ?? []).map((t) => t.actor).filter(Boolean);
 }
 
 function ensureNote(root) {
   let el = root.querySelector?.(".c2mq-reach-note");
   if (el) return el;
+
   el = document.createElement("div");
   el.className = "c2mq-reach-note";
 
@@ -85,28 +49,40 @@ function isEnabled() {
 
 function isMeleeLikeByReach(item, root) {
   if (readItemReach(item) != null) return true;
-  // Some dialogs may not expose item; fallback to presence of "Reach" in details.
   const detailsText = root.querySelector?.(".test-details")?.textContent ?? "";
   return /\bReach\s*\d+\b/i.test(detailsText);
 }
 
 function computeReachAdjustment({ attackerItemReach, targetActor }) {
-  // RAW (core): if target's Reach is longer than the attacker's weapon, difficulty increases
-  // by 1 step per point of difference (Guard-dependent).
-  // MiniQoL: treat Guard as present unless the target has the "No Guard" status.
-  const hasNoGuard = targetActor?.effects?.some(e => {
+  const hasGuardBroken = targetActor?.effects?.some((e) => {
     const statuses = e?.statuses ?? e?._source?.statuses;
     if (!statuses) return false;
-    if (statuses instanceof Set) return statuses.has("c2mq-no-guard");
-    if (Array.isArray(statuses)) return statuses.includes("c2mq-no-guard");
+    if (statuses instanceof Set) return statuses.has("guardBroken");
+    if (Array.isArray(statuses)) return statuses.includes("guardBroken");
     return false;
   }) === true;
+
+  const isProne = targetActor?.effects?.some((e) => {
+    const statuses = e?.statuses ?? e?._source?.statuses;
+    if (!statuses) return false;
+    if (statuses instanceof Set) return statuses.has("prone");
+    if (Array.isArray(statuses)) return statuses.includes("prone");
+    return false;
+  }) === true;
+
+  const guardBroken = hasGuardBroken || isProne;
 
   const defenderReach = computeActorReach(targetActor);
   const attackerReach = attackerItemReach ?? 1;
 
-  const delta = hasNoGuard ? 0 : Math.max(0, defenderReach - attackerReach);
-  return { delta, attackerReach, defenderReach, hasNoGuard };
+  const delta = guardBroken ? 0 : Math.max(0, defenderReach - attackerReach);
+  return {
+    delta,
+    attackerReach,
+    defenderReach,
+    hasNoGuard: guardBroken,
+    hasGuardBroken: guardBroken
+  };
 }
 
 function bindReachRecompute(root, getItemFn) {
@@ -132,7 +108,8 @@ function bindReachRecompute(root, getItemFn) {
       }
 
       const itemReach = readItemReach(item);
-      const { delta, attackerReach, defenderReach, hasNoGuard } = computeReachAdjustment({ attackerItemReach: itemReach, targetActor: targets[0] });
+      const { delta, attackerReach, defenderReach, hasNoGuard } =
+        computeReachAdjustment({ attackerItemReach: itemReach, targetActor: targets[0] });
 
       if (hasNoGuard) {
         note.textContent = game.i18n.format("C2MQ.Reach.NoteNoGuard", { attackerReach, defenderReach });
@@ -148,10 +125,22 @@ function bindReachRecompute(root, getItemFn) {
       const next = clampDifficulty(base + delta);
       setDifficulty(root, next);
 
-      note.textContent = game.i18n.format("C2MQ.Reach.NoteApplied", { delta, attackerReach, defenderReach, base, next });
+      note.textContent = game.i18n.format("C2MQ.Reach.NoteApplied", {
+        delta,
+        attackerReach,
+        defenderReach,
+        base,
+        next
+      });
 
       if (debugEnabled()) {
-        console.debug(`[${MODULE_ID}] reach auto difficulty`, { base, next, delta, attackerReach, defenderReach });
+        console.debug(`[${MODULE_ID}] reach auto difficulty`, {
+          base,
+          next,
+          delta,
+          attackerReach,
+          defenderReach
+        });
       }
     } catch (e) {
       console.error(`[${MODULE_ID}] reach handler error`, e);
@@ -163,19 +152,18 @@ export function registerReachHooks() {
   if (_reachHooksRegistered) return;
   _reachHooksRegistered = true;
 
-  Hooks.on("renderSkillRoller", (app, html, data) => {
+  Hooks.on(HOOK_NAMES.SKILL_ROLLER_CONTEXT, (context) => {
     try {
       if (!isEnabled()) return;
 
-      const root = getRootEl(html);
+      const root = context?.root;
       if (!root) return;
 
-      const getItem = () => inferItemFromApp(app, data);
+      const getItem = () => context?.app?._c2mqBridgeContext?.item ?? context?.item ?? null;
       const item = getItem();
 
       if (!isMeleeLikeByReach(item, root)) return;
 
-      // Provide a hint immediately (doesn't change difficulty until user clicks Roll Dice).
       const targets = collectTargets();
       const note = ensureNote(root);
 
@@ -185,25 +173,38 @@ export function registerReachHooks() {
         note.textContent = game.i18n.localize("C2MQ.Reach.NoteMultiTarget");
       } else {
         const itemReach = readItemReach(item);
-        const { delta, attackerReach, defenderReach, hasNoGuard } = computeReachAdjustment({ attackerItemReach: itemReach, targetActor: targets[0] });
+        const { delta, attackerReach, defenderReach, hasNoGuard } =
+          computeReachAdjustment({ attackerItemReach: itemReach, targetActor: targets[0] });
 
         if (hasNoGuard) {
-          note.textContent = game.i18n.format("C2MQ.Reach.NoteNoGuard", { attackerReach, defenderReach });
+          note.textContent = game.i18n.format("C2MQ.Reach.NoteNoGuard", {
+            attackerReach,
+            defenderReach
+          });
           return;
         }
 
         if (delta) {
           const base = getActiveDifficulty(root);
           const next = clampDifficulty(base + delta);
-          note.textContent = game.i18n.format("C2MQ.Reach.NotePreview", { delta, attackerReach, defenderReach, base, next });
+          note.textContent = game.i18n.format("C2MQ.Reach.NotePreview", {
+            delta,
+            attackerReach,
+            defenderReach,
+            base,
+            next
+          });
         } else {
-          note.textContent = game.i18n.format("C2MQ.Reach.NoteNoChange", { attackerReach, defenderReach });
+          note.textContent = game.i18n.format("C2MQ.Reach.NoteNoChange", {
+            attackerReach,
+            defenderReach
+          });
         }
       }
 
       bindReachRecompute(root, getItem);
     } catch (e) {
-      console.error(`[${MODULE_ID}] renderSkillRoller reach error`, e);
+      console.error(`[${MODULE_ID}] skillRollerContext reach error`, e);
     }
   });
 }

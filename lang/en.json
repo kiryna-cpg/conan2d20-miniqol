@@ -1,49 +1,206 @@
 {
   "C2MQ": {
     "Info": {
-      "FallbackMode": "MiniQoL: fallback mode (no flags yet). Click Roll Damage to initialize."
-    },
-    
+      "FallbackMode": "MiniQoL: fallback mode (no flags yet). Click Roll Damage to initialize.",
+      "SacrificialArmorCoverageLost": "{item} loses coverage on {location}.",
+      "SacrificialArmorBroken": "{item} loses coverage on {location} and is now Broken.",
+      "SacrificialShieldBroken": "{item} is sacrificed and is now Broken.",
+      "SacrificialWeaponBroken": "{item} is sacrificed and is now Broken."
+    },    
     "Label": {
       "Damage": "Damage",
       "Targets": "Targets",
-      "HitLocation": "Hit Location"
+      "HitLocation": "Hit Location",
+      "DamageDetails": "Damage Details",
+      "DamageType": "Damage Type",
+      "MomentumSpends": "Momentum Spends",
+      "NumberOfDice": "Number of Dice",
+      "Effects": "Effects"
     },
     "Button": {
       "RollDamage": "Roll Damage",
       "Apply": "Apply",
       "Undo": "Undo",
       "ApplyAll": "Apply All",
-      "UseCurrentTargets": "Use current targets"
+      "UseCurrentTargets": "Use current targets",
+      "RemoveTarget": "Remove target",
+      "SelectDeselectTargets": "Select/Deselect Targets",
+      "BreakGuard": "Break Guard",
+      "BreakGuardHint": "Spend 2 Momentum to apply Guard Broken to this target",
+      "Defend": "Defend",
+      "Decline": "Decline"
+    },
+    "Tag": {
+      "Piercing": "Piercing {value}",
+      "BonusDamage": "Bonus Damage +{value}",
+      "Intense": "Intense",
+      "Nonlethal": "Nonlethal"
+    },    
+    "DamageType": {
+      "Physical": "Physical",
+      "Mental": "Mental"
+    },
+    "MomentumSpend": {
+      "BonusDamage": {
+        "Cost": "1+",
+        "Title": "Bonus Damage",
+        "Detail": "Add +1 damage per Momentum spent to the current successful attack."
+      },
+      "BreakGuard": {
+        "Cost": "2",
+        "Title": "Break Guard",
+        "Detail": "On an attack or Defend Reaction, the target loses Guard."
+      },
+      "CalledShot": {
+        "Cost": "2",
+        "Title": "Called Shot",
+        "Detail": "Choose the hit location of a physical attack."
+      },
+      "ChangeStance": {
+        "Cost": "1",
+        "Title": "Change Stance",
+        "Detail": "Go prone or stand up."
+      },
+      "Confidence": {
+        "Cost": "1+",
+        "Title": "Confidence",
+        "Detail": "Gain 1§ Morale Soak per Momentum spent until the start of the next turn."
+      },
+      "Disarm": {
+        "Cost": "2–3",
+        "Title": "Disarm",
+        "Detail": "Knock one weapon from the target. Cost is 2 for one-handed, 3 for braced or two-handed weapons."
+      },
+      "Penetration": {
+        "Cost": "1+",
+        "Title": "Penetration",
+        "Detail": "Ignore 2 Soak per Momentum spent for the current attack."
+      },
+      "ReRollDamage": {
+        "Cost": "1",
+        "Title": "Re-roll Damage",
+        "Detail": "Re-roll any number of damage dice from the current attack."
+      },
+      "SecondWind": {
+        "Cost": "1+",
+        "Title": "Second Wind",
+        "Detail": "Immediately recover 1 point per Momentum spent in the chosen capability."
+      },
+      "SecondaryTarget": {
+        "Cost": "2",
+        "Title": "Secondary Target",
+        "Detail": "A second target within Reach of the primary target is also affected and suffers half damage."
+      },
+      "Subdue": {
+        "Cost": "1",
+        "Title": "Subdue",
+        "Detail": "The attack gains the Nonlethal Quality."
+      },
+      "SwiftAction": {
+        "Cost": "2",
+        "Title": "Swift Action",
+        "Detail": "Gain an additional Standard Action. Any required skill test increases by one Difficulty step."
+      },
+      "Withdraw": {
+        "Cost": "1",
+        "Title": "Withdraw",
+        "Detail": "Leave an enemy's Reach without triggering Retaliate."
+      }
     },
     "Status": {
       "Pending": "Pending",
       "Applied": "Applied",
-      "NoGuard": "No Guard"
+      "NoGuard": "Guard Broken"
     },
     "Warn": {
       "DamageSpecMissing": "Damage data not found on this item yet (v0.1).",
       "TargetMissing": "Target token/actor not found.",
-      "NoTargetsCaptured": "No targets were captured for this attack. Select targets now and click the button."
+      "DefenseSkillUnavailable": "MiniQoL cannot determine the correct native defense skill for this actor yet.",
+      "DoomTrackerUnavailable": "MiniQoL could not find the system Doom tracker in the DOM.",
+      "NoTargetsCaptured": "No targets are synced to this attack. Select or clear targets on the canvas, then click the target button.",
+      "NoSacrificialCandidates": "No equipped, unbroken armor/shield/weapon found to sacrifice."
+    },
+    "DamageRoller": {
+      "Title": "Roll Damage",
+      "AttackType": {
+        "Label": "Attack Type",
+        "Melee": "Melee",
+        "Ranged": "Ranged",
+        "Threaten": "Threaten"
+      },
+      "CombatDice": "Combat Dice",
+      "Reloads": "Reloads",
+      "NoReloads": "--- No Reloads Available to Use ---",
+      "BonusDice": "Bonus Dice",
+      "Bonus": {
+        "Other": "Other",
+        "Talent": "Talent"
+      },
+      "BonusDamage": "Bonus Damage",
+      "Spend": {
+        "Doom": "Doom",
+        "Momentum": "Momentum"
+      },
+      "RollDice": "Roll Dice"
     },
     "Err": {
       "StressPathMissing": "Cannot find the Stress field on this actor (check debug logs)."
     },
+    "Reaction": {
+      "Defend": {
+        "Available": "Defense available",
+        "Pending": "Defense pending",
+        "Declined": "Defense declined",
+        "ResolvedMiss": "Defense resolved: attack misses",
+        "ResolvedHit": "Defense resolved: attack hits"
+      },
+      "Protect": {
+        "Available": "Protect available",
+        "Pending": "Protect pending",
+        "Declined": "Protect declined",
+        "ResolvedMiss": "Protect resolved: attack misses",
+        "ResolvedHit": "Protect resolved: protector is hit",
+        "ResolvedFailed": "Protect failed: original target is hit"
+      }
+    },   
     "Dialog": {
       "Undo": {
         "Title": "Undo Damage",
         "Content": "Undo damage for this target?"
       },
-      "Sacrificial": {
-        "Title": "Sacrificial Armor",
-        "Content": "Use Sacrificial Armor to ignore 1 Wound (once per scene)?"
+      "Defend": {
+        "Title": "Defend",
+        "Content": "<strong>{defender}</strong> may Defend against this <strong>{attackType}</strong> attack. This reaction currently costs <strong>{cost}</strong> Doom. Open the native defense roll?"
+      },
+      "Protect": {
+        "Title": "Protect",
+        "Content": "<strong>{protector}</strong> may Protect <strong>{target}</strong> against this <strong>{attackType}</strong> attack. This reaction currently costs <strong>{cost}</strong> Doom and resolves at <strong>D2</strong>. Open the native defense roll?"
+      },
+      "Retaliate": {
+        "Title": "Retaliate",
+        "Content": "<strong>{retaliator}</strong> may Retaliate against <strong>{target}</strong> using <strong>{weapon}</strong>. This reaction currently costs <strong>{cost}</strong> Doom. Open the native melee attack?"
+      },
+    "Sacrificial": {
+      "Title": "Sacrificial Armor",
+      "Content": "Use Sacrificial Armor to ignore 1 Wound (once per scene)?",
+      "SelectLabel": "Choose equipment to sacrifice",
+      "ButtonSacrifice": "Sacrifice",
+      "ButtonCancel": "Don't sacrifice",
+      "Kind": {
+        "Armor": "Armor",
+        "Shield": "Shield",
+        "Weapon": "Weapon"
       }
     },
-
+      "BreakGuard": {
+        "Title": "Break Guard",
+        "Content": "Spend 2 Momentum to Break Guard on <strong>{name}</strong>? (Target loses Guard)"
+      }
+    },
     "Reach": {
       "NoteNoTarget": "Reach: select a target to preview reach adjustments.",
       "NoteMultiTarget": "Reach: multiple targets selected; no automatic difficulty adjustment.",
-      "NoteNoGuard": "Reach: target has No Guard; no penalty (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
+      "NoteNoGuard": "Reach: target has Guard Broken; no penalty (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
       "NoteNoChange": "Reach: no adjustment (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
       "NotePreview": "Reach: would increase Difficulty by +{delta} (attacker Reach {attackerReach}, defender Reach {defenderReach}). Current D{base} → D{next}.",
       "NoteApplied": "Reach: applied +{delta} Difficulty (attacker Reach {attackerReach}, defender Reach {defenderReach}). D{base} → D{next}."
@@ -69,6 +226,10 @@
         "Name": "Enable Sacrificial Armor",
         "Hint": "Offer a prompt to ignore 1 Wound once per scene (v0.1 simplified)."
       },
+      "AutoProtectReaction": {
+        "Name": "Automatic Protect reaction",
+        "Hint": "If enabled, MiniQoL will automatically prompt Protect after a failed or declined Defend. If disabled, Protect is handled manually."
+      },
       "AllowPlayersRequestApply": {
         "Name": "Allow players to request Apply/Undo",
         "Hint": "Players can click Apply/Undo; execution is GM-first via socket."
@@ -80,7 +241,15 @@
       "Debug": {
         "Name": "Debug logging",
         "Hint": "Log extra info to the browser console to help refine actor/item paths."
-      }
+      },
+      "PromptBreakGuard": {
+        "Name": "Show Break Guard helper (2 Momentum)",
+        "Hint": "After a successful hit that generated 2+ Momentum, show an inline Break Guard helper on the attack card instead of a popup."
+      },
+      "SacrificialWeapons": {
+        "Name": "Allow Sacrificial Weapons (homebrew)",
+        "Hint": "If enabled, Sacrificial Armor can also break an equipped weapon when no armor/shield is available."
+      }      
     }
   }
 }

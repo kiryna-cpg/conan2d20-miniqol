@@ -23,17 +23,26 @@ export function getHitLocationEnabled() {
 }
 
 /**
- * Hit Location mapping (core rules):
- * 1–2 Head, 3–5 Right arm, 6–8 Left arm, 9–14 Torso, 15–17 Right leg, 18–20 Left leg
+ * Hit Location mapping (core rules).
+ * Use Conan system canonical location ids so downstream armor coverage and soak
+ * resolution match item.system.coverage.value and actor.system.armor.* paths.
+ *
+ * Canonical ids:
+ * - head
+ * - torso
+ * - larm
+ * - rarm
+ * - lleg
+ * - rleg
  */
 export function hitLocationFromD20(d20) {
   const r = Number(d20 ?? 0);
   if (r >= 1 && r <= 2) return { key: "head", label: "Head" };
-  if (r >= 3 && r <= 5) return { key: "rightArm", label: "Right arm" };
-  if (r >= 6 && r <= 8) return { key: "leftArm", label: "Left arm" };
+  if (r >= 3 && r <= 5) return { key: "rarm", label: "Right arm" };
+  if (r >= 6 && r <= 8) return { key: "larm", label: "Left arm" };
   if (r >= 9 && r <= 14) return { key: "torso", label: "Torso" };
-  if (r >= 15 && r <= 17) return { key: "rightLeg", label: "Right leg" };
-  if (r >= 18 && r <= 20) return { key: "leftLeg", label: "Left leg" };
+  if (r >= 15 && r <= 17) return { key: "rleg", label: "Right leg" };
+  if (r >= 18 && r <= 20) return { key: "lleg", label: "Left leg" };
   return { key: "torso", label: "Torso" };
 }
 
@@ -99,6 +108,72 @@ export function resolveStressPaths(_actor, damageType = "physical") {
   };
 }
 
+/**
+ * Character sheets represent Wounds/Traumas as a dot track (dots.N.status/icon),
+ * and the numeric .value may be derived from that track. When dots are present,
+ * keep both in sync so automated damage correctly reflects on PC sheets.
+ *
+ * @param {Actor} actor
+ * @param {object} params
+ * @param {string} params.trackBasePath  E.g. "system.health.physical.wounds" (without ".value")
+ * @param {number} params.afterValue     New numeric value for the track
+ * @param {"wound"|"trauma"} [params.kind]
+ * @returns {{patches: Array<{path:string,before:any,after:any}>, update: Record<string, any>}}
+ */
+export function buildDotTrackUpdate(actor, { trackBasePath, afterValue, kind = "wound" } = {}) {
+  const patches = [];
+  const update = {};
+  if (!actor || !trackBasePath) return { patches, update };
+
+  const dotsPath = `${trackBasePath}.dots`;
+  const dots = foundry.utils.getProperty(actor, dotsPath);
+  if (!dots || typeof dots !== "object") return { patches, update };
+
+  const indices = Object.keys(dots)
+    .map(k => Number(k))
+    .filter(n => Number.isInteger(n) && n >= 0)
+    .sort((a, b) => a - b);
+
+  if (indices.length === 0) return { patches, update };
+
+  const next = Math.max(0, Math.min(Number(afterValue ?? 0) || 0, indices.length));
+
+  // "healed" is the canonical empty state in Conan2d20.
+  const emptyStatus = "healed";
+
+  // Filled states are system-internal strings. We default to common values used by the Conan2d20 sheets.
+  const filledStatus = kind === "trauma" ? "trauma" : "wounded";
+
+  const emptyIcon = "far fa-circle";
+  const filledIcon = "fas fa-circle";
+
+  for (const i of indices) {
+    const shouldFill = i < next;
+
+    const statusPath = `${trackBasePath}.dots.${i}.status`;
+    const iconPath = `${trackBasePath}.dots.${i}.icon`;
+
+    const beforeStatus = foundry.utils.getProperty(actor, statusPath);
+    const beforeIcon = foundry.utils.getProperty(actor, iconPath);
+
+    const afterStatus = shouldFill ? filledStatus : emptyStatus;
+    const afterIcon = shouldFill ? filledIcon : emptyIcon;
+
+    if (beforeStatus !== afterStatus) {
+      patches.push({ path: statusPath, before: beforeStatus, after: afterStatus });
+      update[statusPath] = afterStatus;
+    }
+
+    // Some documents may not store icon persistently; only patch it if it exists.
+    if (beforeIcon != null && beforeIcon !== afterIcon) {
+      patches.push({ path: iconPath, before: beforeIcon, after: afterIcon });
+      update[iconPath] = afterIcon;
+    }
+  }
+
+  return { patches, update };
+}
+
 export function resolvePersistentSoak(actor, { damageType = "physical", hitLocationKey = "torso" } = {}) {
   if (!actor) return 0;
 
@@ -110,18 +185,19 @@ export function resolvePersistentSoak(actor, { damageType = "physical", hitLocat
   const flatNpc = foundry.utils.getProperty(actor, "system.armor");
   if (typeof flatNpc === "number") return flatNpc;
 
-  // PCs: system.armor.<loc>.soak is a number
+  // PCs: system.armor.<loc>.soak uses Conan canonical ids.
   const locMap = {
     head: "head",
     torso: "torso",
-    leftArm: "l-arm",
-    rightArm: "r-arm",
-    leftLeg: "l-leg",
-    rightLeg: "r-leg"
+    larm: "larm",
+    rarm: "rarm",
+    lleg: "lleg",
+    rleg: "rleg"
   };
 
   const key = locMap[hitLocationKey] ?? "torso";
-  const soak = Number(foundry.utils.getProperty(actor, `system.armor.${key}.soak`));
+  const soakValue = foundry.utils.getProperty(actor, `system.armor.${key}.soak`);
+  const soak = Array.isArray(soakValue) ? Number(soakValue[0] ?? 0) : Number(soakValue ?? 0);
 
   return Number.isFinite(soak) ? soak : 0;
 }
