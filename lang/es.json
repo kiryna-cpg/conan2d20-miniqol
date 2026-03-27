@@ -201,12 +201,13 @@
     },
 
     "Reach": {
-      "NoteNoTarget": "Reach: selecciona un objetivo para previsualizar los ajustes.",
-      "NoteMultiTarget": "Reach: hay múltiples objetivos; no se ajusta la Dificultad automáticamente.",
-      "NoteNoGuard": "Reach: el objetivo tiene Guardia Rota; no hay penalizador (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
-      "NoteNoChange": "Reach: sin ajuste (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
-      "NotePreview": "Reach: aumentaría la Dificultad en +{delta} (Reach atacante {attackerReach}, Reach defensor {defenderReach}). D{base} → D{next}.",
-      "NoteApplied": "Reach: aplicado +{delta} a la Dificultad (Reach atacante {attackerReach}, Reach defensor {defenderReach}). D{base} → D{next}."
+      "NoteNoTarget": "No hay objetivo seleccionado; no se aplica el ajuste automático por Reach.",
+      "NoteMultiTarget": "Hay múltiples objetivos seleccionados; no se aplica el ajuste automático por Reach.",
+      "NoteNoGuard": "Sin penalizador por Reach: el objetivo tiene Guardia Rota (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
+      "NoteNoChange": "Sin ajuste de Dificultad por Reach (Reach atacante {attackerReach}, Reach defensor {defenderReach}).",
+      "NotePreview": "Dificultad aumentada por Reach: Reach atacante {attackerReach}, Reach defensor {defenderReach} (+{delta}).",
+      "NoteApplied": "Dificultad aumentada por Reach: Reach atacante {attackerReach}, Reach defensor {defenderReach} (+{delta}).",
+      "NoteBonusDice": "Bonus d20 porque el defensor tiene la Guardia Rota: Reach atacante {attackerReach}, Reach defensor {defenderReach} (+{delta} bonus d20)."
     },
     "Setting": {
       "AutoRollDamage": {

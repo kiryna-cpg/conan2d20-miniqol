@@ -198,12 +198,13 @@
       }
     },
     "Reach": {
-      "NoteNoTarget": "Reach: select a target to preview reach adjustments.",
-      "NoteMultiTarget": "Reach: multiple targets selected; no automatic difficulty adjustment.",
-      "NoteNoGuard": "Reach: target has Guard Broken; no penalty (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
-      "NoteNoChange": "Reach: no adjustment (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
-      "NotePreview": "Reach: would increase Difficulty by +{delta} (attacker Reach {attackerReach}, defender Reach {defenderReach}). Current D{base} → D{next}.",
-      "NoteApplied": "Reach: applied +{delta} Difficulty (attacker Reach {attackerReach}, defender Reach {defenderReach}). D{base} → D{next}."
+      "NoteNoTarget": "No target selected; Reach auto-adjustment not applied.",
+      "NoteMultiTarget": "Multiple targets selected; Reach auto-adjustment not applied.",
+      "NoteNoGuard": "No Reach penalty: target has Guard Broken (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
+      "NoteNoChange": "No Reach difficulty adjustment (attacker Reach {attackerReach}, defender Reach {defenderReach}).",
+      "NotePreview": "Difficulty increased due to Reach: attacker Reach {attackerReach}, defender Reach {defenderReach} (+{delta}).",
+      "NoteApplied": "Difficulty increased due to Reach: attacker Reach {attackerReach}, defender Reach {defenderReach} (+{delta}).",
+      "NoteBonusDice": "Bonus d20 due to defender having a Broken Guard: attacker Reach {attackerReach}, defender Reach {defenderReach} (+{delta} bonus d20)."
     },
     "Setting": {
       "AutoRollDamage": {

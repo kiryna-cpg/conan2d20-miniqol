@@ -12,7 +12,68 @@ This project follows a lightweight versioning style.
 
 ---
 
-## [0.1.0] - Current
+## [0.2.0] - Current
+### Added
+- Mini QoL support for **native Conan damage cards**, including damage rolls launched from Actions and other system damage workflows.
+- Inline **Damage Details** on attack and damage chat cards, including:
+  - Damage Type
+  - Number of dice
+  - Effects generated
+  - Momentum / Doom spent on damage
+  - Weapon quality / effect tags when present
+- Inline **Momentum Spends** reference block on successful attack cards, showing the standard combat spend list in a compact tooltip-driven format.
+- Inline **Break Guard** helper on eligible attack results, using the Conan **Guard Broken** icon directly on the target row.
+- Safer **target sync toggle** on chat cards:
+  - if stored targets exist, clicking the target icon clears them
+  - if no stored targets exist, clicking the icon captures the current canvas targets
+- Mini QoL controls on **native Conan damage cards**, including:
+  - target sync / clear
+  - Apply / Undo
+  - hit-location-aware follow-up where appropriate
+- Runtime safeguard from Mini QoL for the Conan system `damageRoll()` macro zero-spend counter edge case.
+- Auto-fit for the native attack dialog after Mini QoL injects Reach-related UI, preventing unnecessary scrollbars.
+- Reach handling for the **lost Guard** case:
+  - if the defender has lost Guard and has higher Reach, the attacker gains the correct **bonus d20** instead of suffering a Difficulty increase
+
+### Changed
+- Promoted the module to **0.2.0** as the next combat automation milestone after the first stable 0.1.x release.
+- Reworked **Break Guard** from popup confirmation into an inline helper on the attack card.
+- Updated the existing Break Guard setting so it now controls inline helper visibility instead of a modal dialog.
+- Reworked target management into a single **icon-based target sync control** in the card header.
+- Refined attack-card layout so target controls no longer crowd **Pending / Apply / Undo**.
+- Reduced combat popup noise by moving more post-hit decisions and reminders into the chat card itself.
+- Refined the Reach warning in the native attack dialog:
+  - the effective Difficulty is now reflected directly in the dialog instead of only on the final chat result
+  - the Reach warning is shown only when Reach actually modifies the roll
+  - the bonus-d20 Reach case uses a distinct **green** message, while Difficulty increases remain **red**
+- Shortened and reorganized the README for release-facing documentation.
+
+### Fixed
+- Fixed native **Roll Damage** cards so they also receive Mini QoL controls.
+- Fixed target sync behavior so stored targets are not accidentally overwritten by a new canvas selection.
+- Fixed duplicated tooltip display on the target sync control.
+- Fixed the Conan system `damageRoll()` macro edge case that could throw `Error updating Counter: Invalid Value Type` when no Momentum or Doom was spent.
+- Fixed the inline phoenix sigil display in chat presentation.
+- Fixed `autoApplyEnabled is not defined` error during reaction resolution.
+- Fixed a regression where skill rollers could open at **D0** instead of their intended default / configured Difficulty.
+- Fixed reaction Momentum / Doom escalation reset so it resets correctly on **new rounds**.
+- Fixed `Threaten` incorrectly generating **Hit Location**.
+- Fixed invalid `Retaliate` prompts caused by defensive / non-eligible contexts.
+- Fixed canceled **Defense** rolls leaving the original attack unresolved in chat.
+- Fixed **Ranged Attacks** not triggering **Retaliate** when enemies were actually within Reach.
+- Fixed reaction eligibility filtering so invalid offensive / defensive contexts are excluded more reliably.
+- Fixed hit-location-sensitive workflows so they only apply where appropriate.
+- Fixed Reach preview and resolution so the attack dialog and final chat result stay aligned.
+- Fixed Reach handling for targets with **Guard Broken** so they now receive the correct **bonus d20** behavior instead of an incorrect Difficulty increase.
+
+### UX
+- Improved post-roll readability with expandable damage details and compact Momentum reminders.
+- Improved combat card usability by keeping high-frequency actions inline and icon-driven.
+- Reduced dialog noise by hiding non-impactful Reach notices and showing only meaningful Reach changes.
+
+---
+
+## [0.1.0]
 ### Added
 - Mini QoL support for **native Conan damage cards**, including damage rolls launched from Actions and other system damage workflows.
 - Full **Momentum Spends** reference block on attack cards, showing the standard combat spend list in a compact tooltip-driven format.
@@ -140,4 +201,5 @@ This project follows a lightweight versioning style.
 ## Versioning notes
 - `v0.0.x`: combat workflow foundation
 - `v0.1.x`: first stable combat QoL milestone
+- `v0.2.x`: expanded combat card support, stronger Reach handling, and cleaner native dialog integration
 - future releases: broader integration layers, optional engagement/zones support, and more contextual helpers
