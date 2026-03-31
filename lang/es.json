@@ -9,18 +9,23 @@
     },    
     "Label": {
       "Damage": "Daño",
+      "DamagePending": "Daño pendiente",
+      "DamageSummary": "{total} de Daño {type}",
       "Targets": "Objetivos",
       "HitLocation": "Localización",
-      "DamageDetails": "Detalle del daño",
-      "DamageType": "Tipo de daño",
+      "DamageDetails": "Detalles del daño",
+      "DamageType": "Tipo de Daño",
       "MomentumSpends": "Gastos de Momentum",
       "NumberOfDice": "Número de dados",
-      "Effects": "Efectos"
+      "Effects": "Effects"
     },
     "Button": {
       "RollDamage": "Tirar daño",
       "Apply": "Aplicar",
+      "ApplyDamageToTarget": "Aplicar Daño al objetivo",
       "Undo": "Deshacer",
+      "UndoDamage": "Deshacer Daño",
+      "UndoAll": "Deshacer todo el Daño",
       "ApplyAll": "Aplicar a todos",
       "UseCurrentTargets": "Usar objetivos actuales",
       "RemoveTarget": "Quitar objetivo",
@@ -28,6 +33,8 @@
       "BreakGuard": "Romper Guardia",
       "BreakGuardHint": "Gastar 2 Momentum para aplicar Guardia Rota a este objetivo",
       "Defend": "Defender",
+      "GoToDefenseRoll": "Ir a la tirada de Defensa",
+      "GoToAttackRoll": "Ir a la tirada de ataque",
       "Decline": "Rechazar"
     },
     "Tag": {
@@ -108,19 +115,26 @@
       }
     },
     "Status": {
-      "Pending": "Pendiente",
-      "Applied": "Aplicado",
+      "Pending": "Daño Pendiente",
+      "Applied": "Daño Aplicado",
       "NoGuard": "Guardia Rota"
     },
     "Warn": {
       "DamageSpecMissing": "No se han encontrado aún datos de daño en este objeto (v0.1).",
       "TargetMissing": "No se ha encontrado el token/actor objetivo.",
       "DefenseSkillUnavailable": "MiniQoL aún no puede determinar de forma fiable la skill defensiva nativa correcta para este actor.",
-      "DoomTrackerUnavailable": "MiniQoL no ha podido encontrar el tracker de Doom del sistema en el DOM.",
+      "DoomTrackerUnavailable": "MiniQoL no ha podido encontrar el tracker de Perdición del sistema en el DOM.",
       "NoTargetsCaptured": "No hay objetivos sincronizados para este ataque. Selecciona o deselecciona objetivos en el lienzo y luego pulsa el botón de objetivo.",
+      "DefendNeedsSingleTarget": "Sincroniza exactamente un objetivo en este ataque para habilitar Defender.",
+      "ReactionUnavailableNoDoom": "{name} necesita {spent} Perdición para usar {reaction}. No hay suficiente Perdición en la reserva.",
       "NoSacrificialCandidates": "No se ha encontrado armadura/escudo/arma equipado, intacto y sacrificable."
     },
-
+    "Chat": {
+      "ReactionUnavailableTitle": "Reacción no disponible",
+      "ReactionDoomPaid": "{character} ha añadido {spent} Perdición a la reserva para {reaction}.",
+      "ReactionDoomSpent": "{character} ha gastado {spent} Perdición de la reserva para {reaction}.",
+      "ReactionUnavailableNoDoom": "{character} no puede usar {reaction}: no hay suficiente Perdición en la reserva."
+    },
     "DamageRoller": {
       "Title": "Tirar Daño",
       "AttackType": {
@@ -151,10 +165,10 @@
     "Reaction": {
       "Defend": {
         "Available": "Defensa disponible",
-        "Pending": "Defensa pendiente",
+        "Pending": "Tirada de Defensa en curso",
         "Declined": "Defensa rechazada",
-        "ResolvedMiss": "Defensa resuelta: el ataque falla",
-        "ResolvedHit": "Defensa resuelta: el ataque impacta"
+        "ResolvedMiss": "Defensa superada",
+        "ResolvedHit": "Defensa fallida"
       },
       "Protect": {
         "Available": "Reacción Proteger disponible",
@@ -169,6 +183,10 @@
       "Undo": {
         "Title": "Undo Damage",
         "Content": "¿Deshacer el daño para este objetivo?"
+      },
+      "UndoAll": {
+        "Title": "Deshacer todo el Daño",
+        "Content": "¿Deshacer el daño para todos los objetivos aplicados?"
       },
       "Defend": {
         "Title": "Defender",

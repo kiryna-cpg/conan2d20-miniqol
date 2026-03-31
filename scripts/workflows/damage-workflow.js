@@ -1074,29 +1074,20 @@ async function _applyToSingle(message, tokenUuid) {
   if (debugEnabled()) console.debug(`[${MODULE_ID}] apply`, { tokenUuid, damageTotal, soak, netDamage, harms, stressPath, harmPath });
 }
 
-export async function execUndoDamage(message, targetTokenUuid) {
-  if (!message || !targetTokenUuid) return;
-  const flags = getFlags(message);
-  if (!flags) return;
+async function _undoSingleAppliedEntry(message, targetTokenUuid) {
+  if (!message || !targetTokenUuid) return false;
 
-  if (!allowPlayerRequests() && !game.user?.isGM) return;
-  if (!isAuthoritativeForApplyWorkflow(message)) return;
+  const flags = getFlags(message);
+  if (!flags) return false;
 
   const found = findAppliedEntry(flags, targetTokenUuid);
-  if (!found) return;
+  if (!found) return false;
   const applied = found.value;
-
-  const confirm = await Dialog.confirm({
-    title: game.i18n.localize("C2MQ.Dialog.Undo.Title"),
-    content: `<p>${game.i18n.localize("C2MQ.Dialog.Undo.Content")}</p>`,
-    defaultYes: false
-  });
-  if (!confirm) return;
 
   const actor = applied.actorUuid ? await fromUuid(applied.actorUuid) : null;
   if (!actor) {
     ui.notifications.warn(game.i18n.localize("C2MQ.Warn.TargetMissing"));
-    return;
+    return false;
   }
 
   const sac = applied?.sacrificial;
@@ -1128,6 +1119,61 @@ export async function execUndoDamage(message, targetTokenUuid) {
     [`flags.${MODULE_ID}.applied.-=${delKey}`]: null,
     [`flags.${MODULE_ID}.applied.-=Scene`]: null
   });
+
+  if (debugEnabled()) {
+    console.debug(`[${MODULE_ID}] undo`, { targetTokenUuid, actor: actor.uuid });
+  }
+
+  return true;
+}
+
+export async function execUndoDamage(message, targetTokenUuid) {
+  if (!message || !targetTokenUuid) return;
+  const flags = getFlags(message);
+  if (!flags) return;
+
+  if (!allowPlayerRequests() && !game.user?.isGM) return;
+  if (!isAuthoritativeForApplyWorkflow(message)) return;
+
+  const found = findAppliedEntry(flags, targetTokenUuid);
+  if (!found) return;
+
+  const confirm = await Dialog.confirm({
+    title: game.i18n.localize("C2MQ.Dialog.Undo.Title"),
+    content: `<p>${game.i18n.localize("C2MQ.Dialog.Undo.Content")}</p>`,
+    defaultYes: false
+  });
+  if (!confirm) return;
+
+  await _undoSingleAppliedEntry(message, targetTokenUuid);
   try { ui.chat?.render?.(true); } catch (_e) {}
-  if (debugEnabled()) console.debug(`[${MODULE_ID}] undo`, { targetTokenUuid, actor: actor.uuid });
+}
+
+export async function execUndoAll(message) {
+  if (!message) return;
+  const flags = getFlags(message);
+  if (!flags) return;
+
+  if (!allowPlayerRequests() && !game.user?.isGM) return;
+  if (!isAuthoritativeForApplyWorkflow(message)) return;
+
+  const targets = Array.isArray(flags.targets) ? flags.targets : [];
+  const appliedUuids = targets
+    .map((target) => target?.tokenUuid)
+    .filter((tokenUuid) => !!tokenUuid && !!findAppliedEntry(flags, tokenUuid));
+
+  if (!appliedUuids.length) return;
+
+  const confirm = await Dialog.confirm({
+    title: game.i18n.localize("C2MQ.Dialog.UndoAll.Title"),
+    content: `<p>${game.i18n.localize("C2MQ.Dialog.UndoAll.Content")}</p>`,
+    defaultYes: false
+  });
+  if (!confirm) return;
+
+  for (const tokenUuid of appliedUuids) {
+    await _undoSingleAppliedEntry(message, tokenUuid);
+  }
+
+  try { ui.chat?.render?.(true); } catch (_e) {}
 }

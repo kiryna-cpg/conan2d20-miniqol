@@ -4,114 +4,141 @@
     {{localize "C2MQ.Info.FallbackMode"}}
   </div>
 {{/if}}
-  {{#if reaction.visible}}
-  <div class="c2mq-row c2mq-reaction">
-    <div class="c2mq-left">
-      <span class="c2mq-label">{{reaction.label}}</span>
-      {{#if reaction.detail}}
-        <span class="c2mq-muted">{{reaction.detail}}</span>
-      {{/if}}
-    </div>
-  </div>
-  {{/if}}
-  <div class="c2mq-row c2mq-damage">
-    <div class="c2mq-left">
-      <span class="c2mq-label">{{localize "C2MQ.Label.Damage"}}:</span>
-      {{#if damage.rolled}}
-        <span class="c2mq-value">{{damage.total}}</span>
-<span class="c2mq-muted">
-  ({{damage.dice}}<img class="c2mq-inline-icon" src="systems/conan2d20/assets/icons/phoenix-sigil.svg" alt="" aria-hidden="true">{{#if damage.static}}+{{damage.static}}{{/if}})
-</span>
-      {{else}}
-        <span class="c2mq-muted">—</span>
-      {{/if}}
-    </div>
+  {{#unless standaloneDamageCard}}
+    {{#unless damage.rolled}}
+      <div class="c2mq-row c2mq-roll-damage-top">
+        <button
+          type="button"
+          class="c2mq-btn c2mq-btn-roll-damage-wide"
+          data-action="roll-damage"
+          data-tooltip="{{localize "C2MQ.Button.RollDamage"}}"
+          aria-label="{{localize "C2MQ.Button.RollDamage"}}"
+          {{#unless canRollDamage}}disabled{{/unless}}>
+          <span>{{localize "C2MQ.Button.RollDamage"}}</span>
+          <i class="fa-solid fa-droplet" aria-hidden="true"></i>
+        </button>
+      </div>
+    {{/unless}}
 
-    <div class="c2mq-right">
-      <button type="button" class="c2mq-btn"
-        data-action="roll-damage"
-        {{#if damage.rolled}}disabled{{/if}}
-        {{#unless canRollDamage}}disabled{{/unless}}>
-        {{localize "C2MQ.Button.RollDamage"}}
-      </button>
+    {{#if reaction.visible}}
+    <div class="c2mq-row c2mq-reaction">
+      <div class="c2mq-left">
+        <span class="c2mq-label {{reaction.labelClass}}">{{reaction.label}}</span>
+        {{#if reaction.detail}}
+          <span class="c2mq-muted">{{reaction.detail}}</span>
+        {{/if}}
+      </div>
+
+      {{#if reaction.showDefendButton}}
+        <div class="c2mq-right">
+          <button
+            type="button"
+            class="c2mq-btn c2mq-btn-icon c2mq-btn-defend"
+            data-action="defend"
+            data-tooltip="{{localize "C2MQ.Button.Defend"}}"
+            aria-label="{{localize "C2MQ.Button.Defend"}}"
+            {{#if reaction.defendDisabled}}disabled{{/if}}>
+            <i class="fa-solid fa-shield-exclamation" aria-hidden="true"></i>
+          </button>
+        </div>
+      {{/if}}
+
+      {{#unless reaction.canDefend}}
+        {{#if reaction.canGoToDefenseRoll}}
+          <div class="c2mq-right">
+            <button
+              type="button"
+              class="c2mq-btn c2mq-btn-icon"
+              data-action="goto-defense-roll"
+              data-defense-message-id="{{reaction.rollMessageId}}"
+              data-tooltip="{{localize "C2MQ.Button.GoToDefenseRoll"}}"
+              aria-label="{{localize "C2MQ.Button.GoToDefenseRoll"}}">
+              <i class="fa-solid fa-shield-quartered" aria-hidden="true"></i>
+            </button>
+          </div>
+        {{/if}}
+      {{/unless}}
     </div>
-  </div>
+    {{/if}}
 
     {{#if damage.rolled}}
-    <details class="c2mq-damage-details">
-      <summary class="c2mq-damage-details-summary">
-        {{localize "C2MQ.Label.DamageDetails"}}
-      </summary>
-
-      {{#if damageDetail.hasDice}}
-        <div class="roll-card c2mq-roll-card">
-          {{#each damageDetail.dice}}
-            <span class="roll-list-entry roll d6-combat{{this.face}}">{{{this.display}}}</span>
-          {{/each}}
-        </div>
-      {{/if}}
-
-      <div class="c2mq-damage-meta">
-        <div>
-          <span class="c2mq-label">{{localize "C2MQ.Label.DamageType"}}:</span>
-          <span>{{damageDetail.damageTypeLabel}}</span>
+      <div class="c2mq-damage-inline-block">
+        <div class="c2mq-damage-summary-block">
+          {{localize "C2MQ.Label.DamageSummary" total=damage.total type=damageDetail.damageTypeLabel}}
         </div>
 
-        <div>
-          <span class="c2mq-label">{{localize "C2MQ.Label.NumberOfDice"}}:</span>
-          <span>{{damage.dice}}</span>
-        </div>
-
-        <div>
-          <span class="c2mq-label">{{localize "C2MQ.Label.Effects"}}:</span>
-          <span>{{damageDetail.effects}}</span>
-        </div>
-
-        {{#if damageDetail.hasSpendMomentum}}
-          <div>
-            <span class="c2mq-label">{{localize "C2MQ.DamageRoller.Spend.Momentum"}}:</span>
-            <span>{{damageDetail.spendMomentum}}</span>
+        {{#if damageDetail.hasDice}}
+          <div class="roll-card c2mq-roll-card c2mq-roll-card-inline">
+            {{#each damageDetail.dice}}
+              <span class="roll-list-entry roll d6-combat{{this.face}}">{{{this.display}}}</span>
+            {{/each}}
           </div>
         {{/if}}
 
-        {{#if damageDetail.hasSpendDoom}}
+        <div class="c2mq-damage-meta c2mq-damage-inline-meta">
           <div>
-            <span class="c2mq-label">{{localize "C2MQ.DamageRoller.Spend.Doom"}}:</span>
-            <span>{{damageDetail.spendDoom}}</span>
+            <span class="c2mq-label">{{localize "C2MQ.Label.NumberOfDice"}}:</span>
+            <span>{{damage.dice}}</span>
           </div>
-        {{/if}}
-      </div>
 
-      {{#if damageDetail.hasEffectTags}}
-        <div class="c2mq-tag-list">
-          {{#each damageDetail.effectTags}}
-            <span class="tag chat-tag">{{this.label}}</span>
-          {{/each}}
-        </div>
-      {{/if}}
-    </details>
-  {{/if}}
-
-  {{#if momentumSpends.visible}}
-    <details class="c2mq-momentum-details">
-      <summary class="c2mq-damage-details-summary">
-        {{localize "C2MQ.Label.MomentumSpends"}} ({{momentumSpends.momentum}})
-      </summary>
-
-      <div class="c2mq-spend-list">
-        {{#each momentumSpends.rows}}
-          <div
-            class="c2mq-spend-row {{#if this.highlighted}}highlighted{{/if}}"
-            data-tooltip="{{this.detail}}">
-            <span class="c2mq-spend-cost">{{this.cost}}</span>
-            <div class="c2mq-spend-main">
-              <div class="c2mq-label">{{this.title}}</div>
+          {{#if damageDetail.hasHitLocation}}
+            <div>
+              <span class="c2mq-label">{{localize "C2MQ.Label.HitLocation"}}:</span>
+              <span>{{damageDetail.hitLocationLabel}}</span>
             </div>
+          {{/if}}
+
+          <div>
+            <span class="c2mq-label">{{localize "C2MQ.Label.Effects"}}:</span>
+            <span>{{damageDetail.effects}}</span>
           </div>
-        {{/each}}
+
+          {{#if damageDetail.hasSpendMomentum}}
+            <div>
+              <span class="c2mq-label">{{localize "C2MQ.DamageRoller.Spend.Momentum"}}:</span>
+              <span>{{damageDetail.spendMomentum}}</span>
+            </div>
+          {{/if}}
+
+          {{#if damageDetail.hasSpendDoom}}
+            <div>
+              <span class="c2mq-label">{{localize "C2MQ.DamageRoller.Spend.Doom"}}:</span>
+              <span>{{damageDetail.spendDoom}}</span>
+            </div>
+          {{/if}}
+        </div>
+
+        {{#if damageDetail.hasEffectTags}}
+          <div class="c2mq-tag-list">
+            {{#each damageDetail.effectTags}}
+              <span class="tag chat-tag">{{this.label}}</span>
+            {{/each}}
+          </div>
+        {{/if}}
       </div>
-    </details>
-  {{/if}}
+    {{/if}}
+
+    {{#if momentumSpends.visible}}
+      <details class="c2mq-momentum-details">
+        <summary class="c2mq-damage-details-summary">
+          {{localize "C2MQ.Label.MomentumSpends"}} ({{momentumSpends.momentum}})
+        </summary>
+
+        <div class="c2mq-spend-list">
+          {{#each momentumSpends.rows}}
+            <div
+              class="c2mq-spend-row {{#if this.highlighted}}highlighted{{/if}}"
+              data-tooltip="{{this.detail}}">
+              <span class="c2mq-spend-cost">{{this.cost}}</span>
+              <div class="c2mq-spend-main">
+                <div class="c2mq-label">{{this.title}}</div>
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      </details>
+    {{/if}}
+  {{/unless}}
 
   <div class="c2mq-row c2mq-targets">
     <div class="c2mq-left">
@@ -137,44 +164,57 @@
       {{#each targetRows}}
         <div class="c2mq-target" data-target-uuid="{{this.tokenUuid}}">
           <div class="c2mq-target-main">
-            <span class="c2mq-target-name">{{this.name}}</span>
+            <div class="c2mq-target-topline">
+              <div class="c2mq-target-titleline">
+                <span class="c2mq-target-name">{{this.name}}</span>
+                <span class="c2mq-muted c2mq-damage-state {{this.statusClass}}">{{this.statusLabel}}</span>
+              </div>
 
-            <div class="c2mq-target-badges">
-              {{#if this.hitLocationLabel}}
-                <span class="c2mq-muted">{{this.hitLocationLabel}}</span>
-              {{/if}}
+              <div class="c2mq-target-actions">
+                {{#if this.canBreakGuard}}
+                  <button
+                    type="button"
+                    class="c2mq-btn c2mq-btn-icon c2mq-btn-break-guard"
+                    data-action="break-guard"
+                    data-target-uuid="{{this.tokenUuid}}"
+                    data-tooltip="{{localize "C2MQ.Button.BreakGuardHint"}}"
+                    aria-label="{{localize "C2MQ.Button.BreakGuardHint"}}">
+                    <img src="systems/conan2d20/assets/icons/conditions/guardbreak.svg" alt="">
+                  </button>
+                {{/if}}
 
-              {{#if this.guardStateLabel}}
-                <span class="c2mq-muted">{{this.guardStateLabel}}</span>
-              {{/if}}
+                {{#if this.canApply}}
+                  <button
+                    type="button"
+                    class="c2mq-btn c2mq-btn-icon c2mq-btn-apply"
+                    data-action="apply"
+                    data-target-uuid="{{this.tokenUuid}}"
+                    data-tooltip="{{localize "C2MQ.Button.ApplyDamageToTarget"}}"
+                    aria-label="{{localize "C2MQ.Button.ApplyDamageToTarget"}}">
+                    <img src="modules/conan2d20-miniqol/icons/droplet-plus.svg" alt="">
+                  </button>
+                {{/if}}
+
+                {{#if this.canUndo}}
+                  <button
+                    type="button"
+                    class="c2mq-btn c2mq-btn-icon c2mq-btn-undo"
+                    data-action="undo"
+                    data-target-uuid="{{this.tokenUuid}}"
+                    data-tooltip="{{localize "C2MQ.Button.UndoDamage"}}"
+                    aria-label="{{localize "C2MQ.Button.UndoDamage"}}">
+                    <i class="fa-solid fa-droplet-slash" aria-hidden="true"></i>
+                  </button>
+                {{/if}}
+              </div>
             </div>
-          </div>
 
-          <div class="c2mq-target-actions">
-            {{#if this.canBreakGuard}}
-              <button
-                type="button"
-                class="c2mq-btn c2mq-btn-icon c2mq-btn-break-guard"
-                data-action="break-guard"
-                data-target-uuid="{{this.tokenUuid}}"
-                data-tooltip="{{localize "C2MQ.Button.BreakGuardHint"}}"
-                aria-label="{{localize "C2MQ.Button.BreakGuardHint"}}">
-                <img src="systems/conan2d20/assets/icons/conditions/guardbreak.svg" alt="">
-              </button>
-            {{/if}}
-
-            <span class="c2mq-status {{this.statusClass}}">{{this.statusLabel}}</span>
-
-            {{#if this.canApply}}
-              <button type="button" class="c2mq-btn" data-action="apply" data-target-uuid="{{this.tokenUuid}}">
-                {{localize "C2MQ.Button.Apply"}}
-              </button>
-            {{/if}}
-
-            {{#if this.canUndo}}
-              <button type="button" class="c2mq-btn" data-action="undo" data-target-uuid="{{this.tokenUuid}}">
-                {{localize "C2MQ.Button.Undo"}}
-              </button>
+            {{#if this.guardStateLabel}}
+              <div class="c2mq-target-bottomline">
+                <div class="c2mq-target-badges">
+                  <span class="c2mq-muted">{{this.guardStateLabel}}</span>
+                </div>
+              </div>
             {{/if}}
           </div>
         </div>
@@ -188,8 +228,37 @@
 
   {{#if showApplyAll}}
     <div class="c2mq-row c2mq-apply-all">
-      <button type="button" class="c2mq-btn" data-action="apply-all">
-        {{localize "C2MQ.Button.ApplyAll"}}
+      <button
+        type="button"
+        class="c2mq-btn c2mq-btn-icon c2mq-btn-apply-all"
+        data-action="apply-all"
+        data-tooltip="{{localize "C2MQ.Button.ApplyAll"}}"
+        aria-label="{{localize "C2MQ.Button.ApplyAll"}}">
+        <img src="modules/conan2d20-miniqol/icons/droplets-filled.svg" alt="">
       </button>
+
+      {{#if showUndoAll}}
+        <button
+          type="button"
+          class="c2mq-btn c2mq-btn-icon c2mq-btn-undo-all"
+          data-action="undo-all"
+          data-tooltip="{{localize "C2MQ.Button.UndoAll"}}"
+          aria-label="{{localize "C2MQ.Button.UndoAll"}}">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        </button>
+      {{/if}}
     </div>
+  {{else}}
+    {{#if showUndoAll}}
+      <div class="c2mq-row c2mq-apply-all">
+        <button
+          type="button"
+          class="c2mq-btn c2mq-btn-icon c2mq-btn-undo-all"
+          data-action="undo-all"
+          data-tooltip="{{localize "C2MQ.Button.UndoAll"}}"
+          aria-label="{{localize "C2MQ.Button.UndoAll"}}">
+          <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        </button>
+      </div>
+    {{/if}}
   {{/if}}

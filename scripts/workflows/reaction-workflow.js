@@ -17,14 +17,15 @@ import {
   isSuccessfulRoll
 } from "./message-flags.js";
 import { openNativeDefenseRoll, openNativeWeaponAttack, resolveActorDefenseRoute } from "../adapter/system-rolls.js";
-import { addDoom } from "../adapter/pool-tracker.js";
+import { adjustPoolValue, getPoolValue } from "../adapter/pool-tracker.js";
 import {
   findCombatantForActor,
   getNextReactionCost,
   pushPendingReaction,
   consumePendingReaction,
   findPendingReaction,
-  incrementReactionCount
+  incrementReactionCount,
+  decrementReactionCount
 } from "../state/combat-state-store.js";
 import { debugEnabled, readItemReach } from "../adapter/conan2d20.js";
 import { resolveWithinReach, isWithinReachKnown } from "../adapter/engagement.js";
@@ -189,8 +190,8 @@ function getReactionDefinition(kind = REACTION_KINDS.DEFEND) {
   if (kind === REACTION_KINDS.DEFEND) {
     return {
       kind: REACTION_KINDS.DEFEND,
-      blocksDamageWhenPrompted: true,
-      blocksDamageWhileRolling: true,
+      blocksDamageWhenPrompted: false,
+      blocksDamageWhileRolling: false,
       blocksDamageWhenResolved: false,
       promptTitleKey: "C2MQ.Dialog.Defend.Title",
       buildPromptContent: buildDefendPromptContent,
@@ -202,7 +203,7 @@ function getReactionDefinition(kind = REACTION_KINDS.DEFEND) {
           skillKey: payload.defenseSkillKey,
           pendingContext: buildReactionPendingContext(payload)
         }),
-      applyCost: (defenderActor, cost) => applyDefendCost(defenderActor, cost),
+      applyCost: (defenderActor, cost) => applyReactionCost(defenderActor, cost, REACTION_KINDS.DEFEND),
       resolveOutcome: (attackSuccesses, defenseSuccesses) =>
         resolveDefendOutcome(attackSuccesses, defenseSuccesses),
       trackerUnavailableWarningKey: "C2MQ.Warn.DoomTrackerUnavailable"
@@ -212,8 +213,8 @@ function getReactionDefinition(kind = REACTION_KINDS.DEFEND) {
   if (kind === REACTION_KINDS.PROTECT) {
     return {
       kind: REACTION_KINDS.PROTECT,
-      blocksDamageWhenPrompted: true,
-      blocksDamageWhileRolling: true,
+      blocksDamageWhenPrompted: false,
+      blocksDamageWhileRolling: false,
       blocksDamageWhenResolved: false,
       promptTitleKey: "C2MQ.Dialog.Protect.Title",
       buildPromptContent: buildProtectPromptContent,
@@ -228,7 +229,7 @@ function getReactionDefinition(kind = REACTION_KINDS.DEFEND) {
             reactionDifficulty: 2
           })
         }),
-      applyCost: (defenderActor, cost) => applyDefendCost(defenderActor, cost),
+      applyCost: (defenderActor, cost) => applyReactionCost(defenderActor, cost, REACTION_KINDS.PROTECT),
       resolveOutcome: (attackSuccesses, defenseSuccesses) =>
         resolveProtectOutcome(attackSuccesses, defenseSuccesses),
       trackerUnavailableWarningKey: "C2MQ.Warn.DoomTrackerUnavailable"
@@ -247,7 +248,7 @@ function getReactionDefinition(kind = REACTION_KINDS.DEFEND) {
         openNativeWeaponAttack(retaliatorActor, payload.retaliateItemId, {
           pendingContext: buildReactionPendingContext(payload)
         }),
-      applyCost: (retaliatorActor, cost) => applyDefendCost(retaliatorActor, cost),
+      applyCost: (retaliatorActor, cost) => applyReactionCost(retaliatorActor, cost, REACTION_KINDS.RETALIATE),
       resolveOutcome: () => REACTION_OUTCOMES.HIT,
       trackerUnavailableWarningKey: "C2MQ.Warn.DoomTrackerUnavailable"
     };
@@ -295,41 +296,71 @@ async function resolveDefenderActorFromPayload(payload) {
   return null;
 }
 
-async function applyDefendCost(defenderActor, cost) {
+function getReactionChatLabel(kind = REACTION_KINDS.DEFEND) {
+  if (kind === REACTION_KINDS.PROTECT) return game.i18n.localize("C2MQ.Dialog.Protect.Title");
+  if (kind === REACTION_KINDS.RETALIATE) return game.i18n.localize("C2MQ.Dialog.Retaliate.Title");
+  return game.i18n.localize("C2MQ.Dialog.Defend.Title");
+}
+
+async function canPayReactionCost(actor, cost, reactionKind = REACTION_KINDS.DEFEND) {
   const reactionCost = Math.max(0, Number(cost ?? 1) || 1);
   if (!reactionCost) return true;
+  if (!actor) return false;
 
-  const actorType = String(defenderActor?.type ?? "").trim().toLowerCase();
+  const actorType = String(actor?.type ?? "").trim().toLowerCase();
   const isNpc = actorType === "npc";
-  const actorName = defenderActor?.name ?? game.i18n.localize("C2MQ.UnknownActor");
+  if (!isNpc) return true;
+
+  const availableDoom = Math.max(0, Number(getPoolValue("doom") ?? 0) || 0);
+  if (availableDoom >= reactionCost) return true;
+
+  const actorName = actor?.name ?? game.i18n.localize("C2MQ.UnknownActor");
+  const reactionLabel = getReactionChatLabel(reactionKind);
+
+  ui.notifications?.warn(game.i18n.format("C2MQ.Warn.ReactionUnavailableNoDoom", {
+    name: actorName,
+    reaction: reactionLabel,
+    spent: reactionCost
+  }));
+
+  return false;
+}
+
+async function applyReactionCost(actor, cost, reactionKind = REACTION_KINDS.DEFEND) {
+  const reactionCost = Math.max(0, Number(cost ?? 1) || 1);
+  if (!reactionCost) return true;
+  if (!actor) return false;
+
+  const canPay = await canPayReactionCost(actor, reactionCost, reactionKind);
+  if (!canPay) return false;
+
+  const actorType = String(actor?.type ?? "").trim().toLowerCase();
+  const isNpc = actorType === "npc";
+  const doomDelta = isNpc ? -reactionCost : reactionCost;
 
   try {
-    const trackerApi = globalThis.conan?.apps?.MomentumTrackerV2 ?? null;
-    if (trackerApi?.changeCounter) {
-      await trackerApi.changeCounter(isNpc ? -reactionCost : reactionCost, "doom");
-
-      const titleKey = isNpc ? "CONAN.rollDoomSpent" : "CONAN.rollDoomPaid";
-      const textKey = isNpc ? "CONAN.rollDoomSpentChatText" : "CONAN.rollDoomPaidChatText";
-
-      const html = `<h2>${game.i18n.localize(titleKey)}</h2><div><p>${game.i18n.format(textKey, {
-        character: `<b>${actorName}</b>`,
-        spent: `<b>${reactionCost}</b>`
-      })}</p></div>`;
-
-      await ChatMessage.create({
-        user: game.user?.id ?? null,
-        content: html
-      });
-
-      return true;
-    }
+    return (await adjustPoolValue("doom", doomDelta)) === true;
   } catch (err) {
-    console.error(`[${MODULE_ID}] failed to apply Defend doom cost`, err);
+    console.error(`[${MODULE_ID}] failed to apply reaction doom cost`, err);
+    return false;
   }
+}
 
-  // Final fallback only if the Conan tracker API is unavailable.
-  const doomDelta = isNpc ? -reactionCost : reactionCost;
-  return (await addDoom(doomDelta)) === true;
+async function refundReactionCost(actor, cost, reactionKind = REACTION_KINDS.DEFEND) {
+  const reactionCost = Math.max(0, Number(cost ?? 1) || 1);
+  if (!reactionCost) return true;
+  if (!actor) return false;
+
+  const actorType = String(actor?.type ?? "").trim().toLowerCase();
+  const isNpc = actorType === "npc";
+  const doomDelta = isNpc ? reactionCost : -reactionCost;
+
+  try {
+    return (await adjustPoolValue("doom", doomDelta)) === true;
+  } catch (err) {
+    console.error(`[${MODULE_ID}] failed to refund reaction doom cost`, err);
+    return false;
+  }
 }
 
 async function resolveActorFromMessage(message) {
@@ -501,10 +532,46 @@ async function setReactionState(message, patch = {}) {
   return next.reaction;
 }
 
+async function clearReactionState(message, { kind = REACTION_KINDS.DEFEND } = {}) {
+  if (!message?.flags?.[MODULE_ID]) return null;
+
+  const next = foundry.utils.duplicate(message.flags[MODULE_ID]);
+  next.reaction = {
+    kind,
+    phase: REACTION_PHASES.NONE,
+    blockedDamage: false,
+    outcome: null,
+    reactionId: null,
+    attackType: null,
+    attackerSuccesses: null,
+    defenseSuccesses: null,
+    defenseSkillKey: null,
+    defenderActorUuid: null,
+    defenderActorId: null,
+    defenderTokenUuid: null,
+    defenderCombatantUuid: null,
+    defenderName: null,
+    originalTargetActorUuid: null,
+    originalTargetTokenUuid: null,
+    originalTargetName: null,
+    protectTriedActorIds: [],
+    preferredCharacterActorId: null,
+    promptUserId: null,
+    fallbackGmUserId: null,
+    reactionDifficulty: null,
+    cost: null,
+    costApplied: false,
+    resolvedByMessageId: null
+  };
+
+  await message.update({ [`flags.${MODULE_ID}`]: next });
+  return next.reaction;
+}
+
 function resolveDefendOutcome(attackSuccesses, defenseSuccesses) {
   const atk = Math.max(0, Number(attackSuccesses ?? 0) || 0);
   const def = Math.max(0, Number(defenseSuccesses ?? 0) || 0);
-  return def > atk ? REACTION_OUTCOMES.MISS : REACTION_OUTCOMES.HIT;
+  return def >= atk ? REACTION_OUTCOMES.MISS : REACTION_OUTCOMES.HIT;
 }
 
 function buildPendingReactionPayload({
@@ -585,6 +652,23 @@ async function promptReactionDecision(payload) {
   });
 
   if (!ok) {
+    const attackMessage = game.messages?.get(payload.attackMessageId) ?? null;
+
+    if (attackMessage && isAuthoritativeForAttackMessage(attackMessage)) {
+      await cancelReaction(payload);
+      clearReactionPromptActive(payload, { finished: true });
+      return false;
+    }
+
+    emitSocket(SOCKET_OPS.CANCEL_REACTION, payload);
+    clearReactionPromptActive(payload, { finished: true });
+    return false;
+  }
+
+  const reactionCost = Number(payload.cost ?? 1) || 1;
+  const canPay = await canPayReactionCost(defenderActor, reactionCost, kind);
+
+  if (!canPay) {
     const attackMessage = game.messages?.get(payload.attackMessageId) ?? null;
 
     if (attackMessage && isAuthoritativeForAttackMessage(attackMessage)) {
@@ -724,6 +808,41 @@ function findRollingAttackMessageForDefenseMessage(message, actor = null) {
       return false;
     }) ?? null
   );
+}
+
+function extractRolledSkillKeyFromMessage(message) {
+  const rollData = message?.flags?.data?.rollData ?? {};
+  const key =
+    rollData?.skillKey ??
+    rollData?.skill ??
+    rollData?.expertise ??
+    null;
+
+  return key ? String(key).trim().toLowerCase() : null;
+}
+
+function canMessageResolveReactionRoll(message, attackMessage, pending) {
+  if (!message || !attackMessage || !pending) return false;
+
+  const reaction = attackMessage?.flags?.[MODULE_ID]?.reaction ?? {};
+  const phase = reaction.phase ?? REACTION_PHASES.NONE;
+  const kind = pending.kind ?? REACTION_KINDS.DEFEND;
+
+  if (kind === REACTION_KINDS.RETALIATE) {
+    return isAttackMessage(message);
+  }
+
+  // Defend / Protect only resolve from an explicit defensive skill roll
+  // after the reaction has actually moved into ROLLING.
+  if (phase !== REACTION_PHASES.ROLLING) return false;
+
+  const messageType = String(message?.flags?.data?.type ?? "").trim().toLowerCase();
+  if (messageType !== "skill") return false;
+
+  // Defensive reactions must never resolve from an attack card.
+  if (isAttackMessage(message)) return false;
+
+  return true;
 }
 
 function tokenDisposition(tokenDoc) {
@@ -1389,6 +1508,20 @@ export async function maybeStartReactionWorkflow(
     cost
   });
 
+  if (kind === REACTION_KINDS.DEFEND) {
+    if (debugEnabled()) {
+      console.debug(`[${MODULE_ID}] defend registered as inline card action`, {
+        messageId: fresh.id,
+        payload,
+        routing,
+        preferredCharacterActorId: payload.preferredCharacterActorId ?? null,
+        currentUserId: game.user?.id ?? null
+      });
+    }
+
+    return definition.blocksDamageWhenPrompted === true;
+  }
+
   const shouldHandleLocally = payload.promptUserId === game.user?.id;
 
   if (debugEnabled()) {
@@ -1408,6 +1541,77 @@ export async function maybeStartReactionWorkflow(
   }
 
   emitSocket(SOCKET_OPS.PROMPT_REACTION, payload);
+  return true;
+}
+
+function canCurrentUserOperateInlineDefend(pending) {
+  if (!pending) return false;
+  if (game.user?.isGM === true) return true;
+  return pending.promptUserId != null && pending.promptUserId === game.user?.id;
+}
+
+export async function activatePromptedDefendFromCard(message) {
+  const definition = getReactionDefinition(REACTION_KINDS.DEFEND);
+  if (!definition) return false;
+
+  const fresh = game.messages?.get(message?.id) ?? message ?? null;
+  if (!fresh) return false;
+
+  const phase = fresh.flags?.[MODULE_ID]?.reaction?.phase ?? REACTION_PHASES.NONE;
+  if (phase !== REACTION_PHASES.PROMPTED) return false;
+
+  const pending = buildPendingFromReactionState(fresh);
+  if (!pending || pending.kind !== REACTION_KINDS.DEFEND) return false;
+  if (!canCurrentUserOperateInlineDefend(pending)) return false;
+
+  const defenderActor = await resolveDefenderActorFromPayload(pending);
+  if (!defenderActor) return false;
+
+  const reactionCost = Number(pending.cost ?? 1) || 1;
+  const canPay = await canPayReactionCost(defenderActor, reactionCost, REACTION_KINDS.DEFEND);
+  if (!canPay) return false;
+
+  if (isAuthoritativeForAttackMessage(fresh)) {
+    const started = await beginReaction(pending);
+    if (!started) return false;
+
+    const launched = await definition.launchRoll(defenderActor, pending);
+    if (!launched) {
+      await cancelReaction(pending);
+      return false;
+    }
+
+    return true;
+  }
+
+  emitSocket(SOCKET_OPS.BEGIN_REACTION, pending);
+
+  const launched = await definition.launchRoll(defenderActor, pending);
+  if (!launched) {
+    emitSocket(SOCKET_OPS.CANCEL_REACTION, pending);
+    return false;
+  }
+
+  return true;
+}
+
+export async function declinePromptedDefendFromCard(message) {
+  const fresh = game.messages?.get(message?.id) ?? message ?? null;
+  if (!fresh) return false;
+
+  const phase = fresh.flags?.[MODULE_ID]?.reaction?.phase ?? REACTION_PHASES.NONE;
+  if (phase !== REACTION_PHASES.PROMPTED) return false;
+
+  const pending = buildPendingFromReactionState(fresh);
+  if (!pending || pending.kind !== REACTION_KINDS.DEFEND) return false;
+  if (!canCurrentUserOperateInlineDefend(pending)) return false;
+
+  if (isAuthoritativeForAttackMessage(fresh)) {
+    await cancelReaction(pending);
+    return true;
+  }
+
+  emitSocket(SOCKET_OPS.CANCEL_REACTION, pending);
   return true;
 }
 
@@ -1440,8 +1644,8 @@ export async function beginReaction(payload) {
     ? await definition.applyCost(defenderActor, reactionCost)
     : true;
 
-  if (!costApplied && definition.trackerUnavailableWarningKey) {
-    ui.notifications?.warn(game.i18n.localize(definition.trackerUnavailableWarningKey));
+  if (!costApplied) {
+    return false;
   }
 
   const pending = {
@@ -1504,6 +1708,9 @@ export async function beginReaction(payload) {
     originalTargetTokenUuid: payload.originalTargetTokenUuid ?? null,
     originalTargetName: payload.originalTargetName ?? null,
     protectTriedActorIds: pending.protectTriedActorIds,
+    preferredCharacterActorId: payload.preferredCharacterActorId ?? null,
+    promptUserId: payload.promptUserId ?? null,
+    fallbackGmUserId: payload.fallbackGmUserId ?? null,
     reactionDifficulty: payload.reactionDifficulty ?? null,
     cost: pending.cost,
     costApplied: pending.costApplied
@@ -1530,6 +1737,76 @@ export async function cancelReaction(payload) {
   const message = game.messages?.get(payload?.attackMessageId);
   if (!message || !isAuthoritativeForAttackMessage(message)) return false;
 
+  const currentReaction = message.flags?.[MODULE_ID]?.reaction ?? {};
+  const reactionId = payload?.reactionId ?? currentReaction.reactionId ?? null;
+  const phase = currentReaction.phase ?? REACTION_PHASES.NONE;
+
+  if (kind === REACTION_KINDS.DEFEND) {
+    const defenderActor = await resolveDefenderActorFromPayload({
+      ...payload,
+      defenderActorUuid: currentReaction.defenderActorUuid ?? payload?.defenderActorUuid ?? null,
+      defenderActorId: currentReaction.defenderActorId ?? payload?.defenderActorId ?? null,
+      targetTokenUuid: currentReaction.defenderTokenUuid ?? payload?.defenderTokenUuid ?? null
+    });
+
+    let defenderCombatant = null;
+    if (currentReaction.defenderCombatantUuid) {
+      try {
+        defenderCombatant = await fromUuid(currentReaction.defenderCombatantUuid);
+      } catch (_e) {
+        defenderCombatant = null;
+      }
+    }
+
+    if (!defenderCombatant && defenderActor) {
+      defenderCombatant = findCombatantForActor(defenderActor);
+    }
+
+    if (phase === REACTION_PHASES.ROLLING && defenderCombatant) {
+      await consumePendingReaction(defenderCombatant, (entry) =>
+        entry?.id === reactionId || entry?.attackMessageId === message.id
+      );
+
+      await decrementReactionCount(defenderCombatant, (entry) =>
+        entry?.id === reactionId || entry?.attackMessageId === message.id
+      );
+    }
+
+    if (phase === REACTION_PHASES.ROLLING && currentReaction.costApplied === true && defenderActor) {
+      await refundReactionCost(defenderActor, currentReaction.cost ?? 1, kind);
+    }
+
+    await setReactionState(message, {
+      kind: REACTION_KINDS.DEFEND,
+      phase: REACTION_PHASES.PROMPTED,
+      blockedDamage: getReactionDefinition(REACTION_KINDS.DEFEND)?.blocksDamageWhenPrompted === true,
+      outcome: null,
+      reactionId: currentReaction.reactionId ?? reactionId,
+      attackerSuccesses: currentReaction.attackerSuccesses ?? payload?.attackSuccesses ?? null,
+      defenseSuccesses: null,
+      defenseSkillKey: currentReaction.defenseSkillKey ?? payload?.defenseSkillKey ?? null,
+      defenderActorUuid: currentReaction.defenderActorUuid ?? payload?.defenderActorUuid ?? null,
+      defenderActorId: currentReaction.defenderActorId ?? payload?.defenderActorId ?? null,
+      defenderTokenUuid: currentReaction.defenderTokenUuid ?? payload?.defenderTokenUuid ?? payload?.targetTokenUuid ?? null,
+      defenderCombatantUuid: currentReaction.defenderCombatantUuid ?? payload?.defenderCombatantUuid ?? null,
+      defenderName: currentReaction.defenderName ?? payload?.defenderName ?? null,
+      originalTargetActorUuid: currentReaction.originalTargetActorUuid ?? payload?.originalTargetActorUuid ?? null,
+      originalTargetTokenUuid: currentReaction.originalTargetTokenUuid ?? payload?.originalTargetTokenUuid ?? null,
+      originalTargetName: currentReaction.originalTargetName ?? payload?.originalTargetName ?? null,
+      protectTriedActorIds: [],
+      preferredCharacterActorId: currentReaction.preferredCharacterActorId ?? payload?.preferredCharacterActorId ?? null,
+      promptUserId: currentReaction.promptUserId ?? payload?.promptUserId ?? null,
+      fallbackGmUserId: currentReaction.fallbackGmUserId ?? payload?.fallbackGmUserId ?? null,
+      reactionDifficulty: currentReaction.reactionDifficulty ?? payload?.reactionDifficulty ?? null,
+      cost: currentReaction.cost ?? payload?.cost ?? 1,
+      costApplied: false,
+      resolvedByMessageId: null
+    });
+
+    refreshChatUI();
+    return true;
+  }
+
   await setReactionState(message, {
     kind,
     phase: REACTION_PHASES.DECLINED,
@@ -1543,14 +1820,6 @@ export async function cancelReaction(payload) {
 
   const fresh = game.messages?.get(message.id) ?? message;
   refreshChatUI();
-
-  if (kind === REACTION_KINDS.DEFEND) {
-    const protectBlocked = await maybeStartProtectWorkflow(fresh);
-    if (protectBlocked) {
-      refreshChatUI();
-      return true;
-    }
-  }
 
   if (kind === REACTION_KINDS.PROTECT) {
     const protectBlocked = await maybeStartProtectWorkflow(fresh, {
@@ -1594,16 +1863,12 @@ export async function maybeResolvePendingReactionRoll(message) {
     if (attackMessage) activePending = buildPendingFromReactionState(attackMessage);
   }
 
-  if (!attackMessage) {
-    attackMessage = findRollingAttackMessageForDefenseMessage(message, actor);
-    if (attackMessage) activePending = buildPendingFromReactionState(attackMessage);
-  }
-
   const kind = activePending?.kind ?? REACTION_KINDS.DEFEND;
   const definition = getReactionDefinition(kind);
 
   if (!attackMessage || !activePending || !definition) return false;
   if (!isAuthoritativeForAttackMessage(attackMessage)) return false;
+  if (!canMessageResolveReactionRoll(message, attackMessage, activePending)) return false;
 
   if (!actor) {
     actor = await resolveDefenderActorFromPayload(activePending);
@@ -1650,6 +1915,7 @@ export async function maybeResolvePendingReactionRoll(message) {
   const shouldRetargetToProtector =
     kind === REACTION_KINDS.PROTECT &&
     defenseSuccesses > 0 &&
+    activePending.attackSuccesses > defenseSuccesses &&
     outcome === REACTION_OUTCOMES.HIT &&
     !!activePending.defenderTokenUuid;
 
@@ -1675,6 +1941,22 @@ export async function maybeResolvePendingReactionRoll(message) {
   } else {
     await setReactionState(attackMessage, reactionPatch);
   }
+
+  await message.update({
+    [`flags.${MODULE_ID}.reactionLink`]: {
+      attackMessageId: attackMessage.id,
+      defenseMessageId: message.id,
+      reactionKind: kind,
+      summary: {
+        actorName: activePending.defenderName ?? actor?.name ?? game.i18n.localize("C2MQ.UnknownActor"),
+        reactionKind: kind,
+        cost: Number(activePending.cost ?? 0) || 0,
+        costApplied: activePending.costApplied === true,
+        isNpc: String(actor?.type ?? "").trim().toLowerCase() === "npc",
+        outcome
+      }
+    }
+  });
 
   if (
     kind === REACTION_KINDS.PROTECT &&

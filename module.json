@@ -2,7 +2,7 @@
   "id": "conan2d20-miniqol",
   "title": "Conan 2d20 - Mini QoL",
   "description": "Combat QoL for Conan 2d20: chat damage workflow, target sync, Apply/Undo, reactions, Reach/Guard assistance, Sacrificial Armor, and momentum helpers.",
-  "version": "0.2.0",
+  "version": "0.2.20",
   "authors": [
     { "name": "Kiryna" }
   ],
@@ -28,7 +28,7 @@
   "socket": true,
   "url": "https://github.com/kiryna-cpg/conan2d20-miniqol",
   "manifest": "https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json",
-  "download": "https://github.com/kiryna-cpg/conan2d20-miniqol/releases/download/0.2.0/conan2d20-miniqol.zip",
+  "download": "https://github.com/kiryna-cpg/conan2d20-miniqol/releases/download/0.2.20/conan2d20-miniqol.zip",
   "bugs": "https://github.com/kiryna-cpg/conan2d20-miniqol/issues",
   "license": "MIT"
 }

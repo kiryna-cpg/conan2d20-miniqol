@@ -163,6 +163,38 @@ export async function incrementReactionCount(combatant, payload = {}) {
   });
 }
 
+export async function decrementReactionCount(combatant, matcher = null) {
+  if (!combatant) return null;
+
+  let removed = null;
+
+  return updateCombatState(combatant, (draft) => {
+    draft.reactions.count = Math.max(0, Number(draft.reactions.count ?? 0) - 1);
+
+    const history = Array.isArray(draft.reactions.history) ? draft.reactions.history : [];
+    let index = -1;
+
+    if (typeof matcher === "function") {
+      for (let i = history.length - 1; i >= 0; i -= 1) {
+        if (matcher(history[i])) {
+          index = i;
+          break;
+        }
+      }
+    } else if (history.length) {
+      index = history.length - 1;
+    }
+
+    if (index >= 0) {
+      removed = duplicate(history[index]);
+      history.splice(index, 1);
+    }
+
+    draft.reactions.history = history;
+    return draft;
+  });
+}
+
 export async function pushPendingReaction(combatant, pending) {
   if (!combatant || !pending) return null;
 

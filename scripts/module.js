@@ -12,6 +12,7 @@ import {
   openNativeWeaponAttack
 } from "./adapter/system-rolls.js";
 import { resolveWithinReach } from "./adapter/engagement.js";
+import { consumeReactionRollUiFusionForUser } from "./state/reaction-roll-ui-store.js";
 
 function buildPublicApi() {
   return {
@@ -50,6 +51,74 @@ function patchConanMomentumTrackerZeroDiff() {
   });
 
   console.info(`[${MODULE_ID}] patched MomentumTrackerV2.changeCounter for zero-diff safety`);
+  return true;
+}
+
+function patchConanReactionDoomChatFusion() {
+  const actorProto =
+    CONFIG.Actor?.documentClass?.prototype ??
+    game.actors?.documentClass?.prototype ??
+    null;
+
+  if (!actorProto?.payDoom || !actorProto?.spendDoom) return false;
+  if (actorProto.__c2mqReactionDoomChatFusionPatched === true) return true;
+
+  const originalPayDoom = actorProto.payDoom;
+  const originalSpendDoom = actorProto.spendDoom;
+
+  actorProto.payDoom = async function patchedPayDoom(doomSpend, ...args) {
+    const numericSpend = Number(doomSpend ?? 0) || 0;
+    if (numericSpend <= 0) {
+      return originalPayDoom.call(this, doomSpend, ...args);
+    }
+
+    const fused = consumeReactionRollUiFusionForUser(game.user?.id ?? null);
+    if (!fused) {
+      return originalPayDoom.call(this, doomSpend, ...args);
+    }
+
+    const tracker = globalThis.conan?.apps?.MomentumTrackerV2 ?? null;
+    if (!tracker?.changeCounter) {
+      return originalPayDoom.call(this, doomSpend, ...args);
+    }
+
+    await tracker.changeCounter(Number(`${numericSpend}`), "doom");
+    return;
+  };
+
+  actorProto.spendDoom = async function patchedSpendDoom(doomSpend, ...args) {
+    const numericSpend = Number(doomSpend ?? 0) || 0;
+    if (numericSpend <= 0) {
+      return originalSpendDoom.call(this, doomSpend, ...args);
+    }
+
+    const fused = consumeReactionRollUiFusionForUser(game.user?.id ?? null);
+    if (!fused) {
+      return originalSpendDoom.call(this, doomSpend, ...args);
+    }
+
+    const tracker = globalThis.conan?.apps?.MomentumTrackerV2 ?? null;
+    if (!tracker?.changeCounter) {
+      return originalSpendDoom.call(this, doomSpend, ...args);
+    }
+
+    const newValue = game.settings.get("conan2d20", "doom") - numericSpend;
+    if (newValue < 0) {
+      throw new Error("Doom spend would exceed available doom points.");
+    }
+
+    await tracker.changeCounter(-numericSpend, "doom");
+    return;
+  };
+
+  Object.defineProperty(actorProto, "__c2mqReactionDoomChatFusionPatched", {
+    value: true,
+    configurable: false,
+    enumerable: false,
+    writable: false
+  });
+
+  console.info(`[${MODULE_ID}] patched ConanActor Doom chat fusion for reaction rolls`);
   return true;
 }
 
@@ -93,12 +162,14 @@ Hooks.once("setup", () => {
 Hooks.once("ready", () => {
   exposePublicApi();
   patchConanMomentumTrackerZeroDiff();
+  patchConanReactionDoomChatFusion();
 
   console.info(`[${MODULE_ID}] ready - chat hooks active`);
 
   setTimeout(() => {
     try {
       patchConanMomentumTrackerZeroDiff();
+      patchConanReactionDoomChatFusion();
       ui.chat?.render?.(true);
     } catch (_e) {
       // Ignore chat re-render failures.

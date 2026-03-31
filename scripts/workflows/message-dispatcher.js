@@ -9,7 +9,6 @@ import {
 import { execRollDamage, execApplyDamage } from "./damage-workflow.js";
 import {
   maybeStartReactionWorkflow,
-  maybeStartProtectWorkflow,
   maybeResolvePendingReactionRoll
 } from "./reaction-workflow.js";
 
@@ -43,12 +42,10 @@ export async function dispatchCreatedChatMessage(message) {
     if (attackMessage && isAuthoritativeForMessage(attackMessage)) {
       const reactionKind = attackMessage.flags?.[MODULE_ID]?.reaction?.kind ?? null;
 
-      if (reactionKind === REACTION_KINDS.DEFEND && reactionResolution === REACTION_OUTCOMES.HIT) {
-        const protectBlocked = await maybeStartProtectWorkflow(attackMessage);
-        if (protectBlocked) return;
-      }
-
-      if (reactionResolution === REACTION_OUTCOMES.HIT) {
+      if (
+        reactionKind !== REACTION_KINDS.DEFEND &&
+        reactionResolution === REACTION_OUTCOMES.HIT
+      ) {
         const autoRoll = autoRollEnabled();
         const autoApply = autoApplyEnabled();
 

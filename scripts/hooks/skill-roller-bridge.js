@@ -8,6 +8,7 @@ import {
   maybeStartRetaliateWorkflow,
   maybeCancelPendingReactionFromSkillRollerContext
 } from "../workflows/reaction-workflow.js";
+import { markReactionRollUiFusion } from "../state/reaction-roll-ui-store.js";
 
 let _bridgeRegistered = false;
 
@@ -120,15 +121,39 @@ function readExplicitDifficulty(pendingIntent = null) {
   return clampDifficulty(raw);
 }
 
-function bindRollSubmitMarker(app, root) {
-  const button = root?.querySelector?.(".roll-skill-check");
-  if (!button) return;
-  if (button.dataset.c2mqSubmitBound === "1") return;
+function bindRollSubmitMarker(app, root, context = null) {
+  const button = root?.querySelector?.(".roll-skill-check") ?? null;
+  const form = root?.querySelector?.("form") ?? null;
+  if (!button && !form) return;
+  if (root.dataset.c2mqSubmitBound === "1") return;
 
-  button.dataset.c2mqSubmitBound = "1";
-  button.addEventListener("click", () => {
+  root.dataset.c2mqSubmitBound = "1";
+
+  const reactionKind = String(context?.pendingIntent?.metadata?.reactionKind ?? "").trim().toLowerCase();
+  const isDefensiveReaction =
+    context?.purpose === "defense" ||
+    reactionKind === "defend" ||
+    reactionKind === "protect";
+
+  let submitted = false;
+
+  const markSubmitted = () => {
+    if (submitted) return;
+    submitted = true;
     app._c2mqSubmitted = true;
-  }, { once: true });
+
+    if (isDefensiveReaction) {
+      markReactionRollUiFusion({
+        userId: game.user?.id ?? null,
+        reactionKind
+      });
+    }
+  };
+
+  // Mark as submitted as early as possible, before the app closes.
+  button?.addEventListener("pointerdown", markSubmitted, { once: true });
+  button?.addEventListener("click", markSubmitted, { once: true });
+  form?.addEventListener("submit", markSubmitted, { once: true });
 }
 
 export function registerSkillRollerBridge() {
@@ -205,7 +230,7 @@ export function registerSkillRollerBridge() {
         queueMicrotask(() => applyDifficultyOverride(root, explicitDifficulty));
       }
 
-      bindRollSubmitMarker(app, root);
+      bindRollSubmitMarker(app, root, context);
 
       app._c2mqBridgeContext = context;
 

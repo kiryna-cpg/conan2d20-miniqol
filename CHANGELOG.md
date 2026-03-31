@@ -1,18 +1,62 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 This project follows a lightweight versioning style.
 
 ## [Unreleased]
-### Added
-- Optional integration hooks for a future abstract zones / engagement provider (planned).
-
-### Changed
-- Momentum spend reminders may be expanded with more contextual combat options (planned).
+### Planned
+- Combat Momentum spend interception / resolution.
+- Broader metacurrency-aware combat helpers.
+- Optional future integration points for external engagement / zones tooling.
 
 ---
 
-## [0.2.0] - Current
+## [0.2.20] - Final 0.2.x release
+### Added
+- Inline **Defend** flow on attack cards, using Conan’s native defensive roll workflow.
+- Linked defense-roll summary block with:
+  - Doom spent / paid context
+  - reaction result
+  - navigation back to the originating attack roll
+- Cleaner **Roll Damage** UI integrated into the attack-card flow.
+- Compact, icon-driven card controls for:
+  - target sync
+  - Defend
+  - go to defense roll
+  - go to attack roll
+  - Roll Damage
+  - Apply / Undo
+  - Apply All / Undo All
+- Large inline damage summary presentation on attack cards.
+- **Undo All** support for fully applied multi-target attacks.
+- Safer UI fusion for reaction-related Doom chat output.
+
+### Changed
+- Reworked attack-card layout to keep the highest-frequency combat actions directly on the original card.
+- Reworked standalone damage-card presentation so Mini QoL only keeps the useful controls there.
+- Reworked **Defend** into a non-blocking, inline, card-driven flow instead of a modal-heavy confirmation flow.
+- Refined reaction state handling so unresolved Defend prompts do not auto-resolve on unrelated later actions.
+- Refined combat-card visual language around damage state, reaction state, and icon-based navigation.
+- Promoted this build as the closing release for the **0.2.x** combat-chat workflow line.
+
+### Fixed
+- Fixed cases where canceled or unresolved Defense rolls could leave the attack card in an incorrect state.
+- Fixed cases where unrelated later rolls could incorrectly resolve a prior Defend prompt.
+- Fixed reaction Doom chat duplication so the system’s separate Doom-paid / Doom-spent cards no longer clutter the flow for reaction rolls.
+- Fixed multiple alignment and layout regressions on target rows and inline controls.
+- Fixed standalone damage-card duplication and redundant damage presentation.
+- Fixed Apply/Undo state presentation across repeated attack-card updates.
+- Fixed several reaction continuation edge cases around card refresh and linked chat navigation.
+
+### UX
+- Significantly reduced popup noise during combat.
+- Improved visibility of damage, reaction state, and per-target actions directly on the chat cards.
+- Improved readability and consistency of attack, defense, and damage cards in both English and Spanish.
+
+---
+
+## [0.2.0]
 ### Added
 - Mini QoL support for **native Conan damage cards**, including damage rolls launched from Actions and other system damage workflows.
 - Inline **Damage Details** on attack and damage chat cards, including:
@@ -21,185 +65,53 @@ This project follows a lightweight versioning style.
   - Effects generated
   - Momentum / Doom spent on damage
   - Weapon quality / effect tags when present
-- Inline **Momentum Spends** reference block on successful attack cards, showing the standard combat spend list in a compact tooltip-driven format.
-- Inline **Break Guard** helper on eligible attack results, using the Conan **Guard Broken** icon directly on the target row.
-- Safer **target sync toggle** on chat cards:
-  - if stored targets exist, clicking the target icon clears them
-  - if no stored targets exist, clicking the icon captures the current canvas targets
-- Mini QoL controls on **native Conan damage cards**, including:
-  - target sync / clear
-  - Apply / Undo
-  - hit-location-aware follow-up where appropriate
-- Runtime safeguard from Mini QoL for the Conan system `damageRoll()` macro zero-spend counter edge case.
-- Auto-fit for the native attack dialog after Mini QoL injects Reach-related UI, preventing unnecessary scrollbars.
-- Reach handling for the **lost Guard** case:
-  - if the defender has lost Guard and has higher Reach, the attacker gains the correct **bonus d20** instead of suffering a Difficulty increase
+- Inline **Momentum Spends** reference block on successful attack cards.
+- Inline **Break Guard** helper on eligible attack results.
+- Safer **target sync toggle** on chat cards.
+- Runtime safeguard for the Conan system `damageRoll()` macro zero-spend counter edge case.
+- Auto-fit for the native attack dialog after Mini QoL injects Reach-related UI.
 
 ### Changed
 - Promoted the module to **0.2.0** as the next combat automation milestone after the first stable 0.1.x release.
 - Reworked **Break Guard** from popup confirmation into an inline helper on the attack card.
-- Updated the existing Break Guard setting so it now controls inline helper visibility instead of a modal dialog.
-- Reworked target management into a single **icon-based target sync control** in the card header.
-- Refined attack-card layout so target controls no longer crowd **Pending / Apply / Undo**.
-- Reduced combat popup noise by moving more post-hit decisions and reminders into the chat card itself.
-- Refined the Reach warning in the native attack dialog:
-  - the effective Difficulty is now reflected directly in the dialog instead of only on the final chat result
-  - the Reach warning is shown only when Reach actually modifies the roll
-  - the bonus-d20 Reach case uses a distinct **green** message, while Difficulty increases remain **red**
-- Shortened and reorganized the README for release-facing documentation.
+- Reworked target management into a single icon-based target sync control.
+- Refined attack-card layout so target controls no longer crowd Apply/Undo.
 
 ### Fixed
 - Fixed native **Roll Damage** cards so they also receive Mini QoL controls.
 - Fixed target sync behavior so stored targets are not accidentally overwritten by a new canvas selection.
 - Fixed duplicated tooltip display on the target sync control.
 - Fixed the Conan system `damageRoll()` macro edge case that could throw `Error updating Counter: Invalid Value Type` when no Momentum or Doom was spent.
-- Fixed the inline phoenix sigil display in chat presentation.
-- Fixed `autoApplyEnabled is not defined` error during reaction resolution.
-- Fixed a regression where skill rollers could open at **D0** instead of their intended default / configured Difficulty.
-- Fixed reaction Momentum / Doom escalation reset so it resets correctly on **new rounds**.
-- Fixed `Threaten` incorrectly generating **Hit Location**.
-- Fixed invalid `Retaliate` prompts caused by defensive / non-eligible contexts.
-- Fixed canceled **Defense** rolls leaving the original attack unresolved in chat.
-- Fixed **Ranged Attacks** not triggering **Retaliate** when enemies were actually within Reach.
-- Fixed reaction eligibility filtering so invalid offensive / defensive contexts are excluded more reliably.
-- Fixed hit-location-sensitive workflows so they only apply where appropriate.
-- Fixed Reach preview and resolution so the attack dialog and final chat result stay aligned.
-- Fixed Reach handling for targets with **Guard Broken** so they now receive the correct **bonus d20** behavior instead of an incorrect Difficulty increase.
-
-### UX
-- Improved post-roll readability with expandable damage details and compact Momentum reminders.
-- Improved combat card usability by keeping high-frequency actions inline and icon-driven.
-- Reduced dialog noise by hiding non-impactful Reach notices and showing only meaningful Reach changes.
+- Fixed several Reach-handling edge cases around Guard and dialog preview.
 
 ---
 
 ## [0.1.0]
 ### Added
-- Mini QoL support for **native Conan damage cards**, including damage rolls launched from Actions and other system damage workflows.
-- Full **Momentum Spends** reference block on attack cards, showing the standard combat spend list in a compact tooltip-driven format.
-- Safer **target sync toggle** on chat cards:
-  - if stored targets exist, clicking the target icon clears them
-  - if no stored targets exist, clicking the icon captures the current canvas targets
-- Runtime safeguard from Mini QoL for the Conan system `damageRoll()` macro zero-spend counter edge case.
-
-### Changed
-- Promoted the module to **0.1.0** as the first combat-focused release milestone.
-- Reworked target management into a single **icon-based target sync control** in the card header.
-- Reworked **Break Guard** presentation to use the Conan **Guard Broken** icon inline.
-- Refined attack-card layout so target controls no longer crowd **Pending / Apply / Undo**.
-- Shortened and reorganized the README for release-facing documentation.
-
-### Fixed
-- Fixed native **Roll Damage** cards so they also receive Mini QoL controls.
-- Fixed target sync behavior so stored targets are not accidentally overwritten by a new canvas selection.
-- Fixed duplicated tooltip display on the target sync control.
-- Fixed the Conan system `damageRoll()` macro edge case that could throw `Error updating Counter: Invalid Value Type` when no Momentum or Doom was spent.
-- Fixed the inline phoenix sigil display in chat presentation.
-
----
-
-## [0.0.4]
-### Added
-- Inline **Damage Details** on attack chat cards, including:
-  - Damage Type
-  - Number of dice
-  - Effects generated
-  - Momentum/Doom spent on damage
-  - Weapon quality / effect tags when present
-- Inline **Momentum Spends** helper on successful attack cards.
-- Inline **Break Guard** helper/button on eligible attack results.
-- **Remove Target** control on attack chat cards to remove an incorrectly selected target before applying damage.
-- Target list remains visible on the attack card even before damage is rolled.
-
-### Changed
-- Reworked **Break Guard** flow from popup confirmation to an inline helper on the attack card.
-- Updated the existing Break Guard setting so it now controls inline helper visibility instead of a modal dialog.
-- Improved attack card readability by moving more combat context directly into chat instead of spawning extra dialogs.
-- Improved target management directly from the attack card.
-
-### Fixed
-- Fixed `autoApplyEnabled is not defined` error during reaction resolution.
-- Fixed a regression where skill rollers could open at **D0** instead of their intended default / configured difficulty.
-- Fixed reaction Momentum/Doom escalation reset so it resets correctly on **new rounds**.
-- Fixed `Threaten` incorrectly generating **Hit Location**.
-- Fixed invalid `Retaliate` prompts caused by defensive / non-eligible contexts.
-- Fixed canceled **Defense** rolls leaving the original attack unresolved in chat.
-- Fixed **Ranged Attacks** not triggering **Retaliate** when enemies were actually within Reach.
-- Fixed reaction eligibility filtering so invalid offensive / defensive contexts are excluded more reliably.
-- Fixed hit-location-sensitive workflows so they only apply where appropriate.
-
-### UX
-- Reduced intrusive combat popups by moving key post-hit decisions into the chat card itself.
-- Improved post-roll readability with expandable damage details and contextual Momentum reminders.
-
----
-
-## [0.0.3]
-### Added
-- **Reach / Guard** combat helpers for melee-like attacks:
-  - Reach-aware difficulty assistance
-  - Reach preview note in the native skill roller
-  - Ignore Reach penalty when the defender has **Guard Broken** or **Prone**
-- Optional **Break Guard** support for successful attacks that generate **2+ Momentum**.
-- Optional **Hit Location** support stored per target and reused for Conan armor soak workflows.
-- Expanded **Sacrificial Armor / Shield** support:
-  - Uses Conan system real armor coverage (`item.system.coverage.value`)
-  - Sacrificed armor loses coverage for the struck location first
-  - Shields / items are marked broken when sacrificed
-  - Undo restores both actor state and sacrificed item state
-- Automated **reaction pipeline** for Conan combat:
-  - **Defend**
-  - **Protect** (optional, world setting, disabled by default)
-  - Initial **Retaliate** support
-- Native roll routing helpers so reactions use Conan system dialogs:
-  - native skill rolls
-  - native defense rolls
-  - native weapon attack rolls
-- Reaction-aware Momentum/Doom bank handling for PCs and NPCs.
-
-### Changed
-- Improved combat message state so reaction resolution and damage workflow can continue on the original attack card.
-- Refined Reach handling to align more closely with Conan combat assumptions instead of treating proximity as a flat same-zone shortcut.
-- Protect automation was moved behind a dedicated **world setting** and left disabled by default.
-
-### Fixed
-- Fixed Sacrificial Armor to use real Conan system coverage instead of simplified assumptions.
-- Fixed sacrificial item restoration on Undo so broken/coverage state is restored correctly.
-- Fixed reaction continuation flow so attack resolution can proceed after defensive reactions.
-- Fixed multiple reaction / routing edge cases around native dialog bridging.
-
----
-
-## [0.0.2]
-### Added
-- Stable Apply/Undo workflow:
-  - **Undo Damage** per target from chat
-  - **Apply Damage locking**: an attack message can be applied only once per target unless undone
-- Persistent chat UI:
-  - Mini QoL block remains visible after reload
-- Sacrificial Armor / Shield (optional):
-  - sacrificed items are marked **broken**
-  - Undo restores the item state
-
-### Fixed
-- Fixed `applied` / `hitLocation` storage in message flags for token UUID keys.
-- Fixed Apply/Undo detection in UI so Apply re-enables correctly after Undo.
-
----
-
-## [0.0.1] - Initial public iteration
-### Added
+- First stable combat-focused release milestone.
 - Chat workflow block for successful attacks with damage:
   - Roll Damage
   - Apply Damage per target
+  - Undo Damage per target
 - Conan Combat Dice rolling
 - Target capture from current selection
 - Basic Conan-aware soak handling for PCs, NPCs, and mental damage
+- Persistent chat UI based on message flags
+- Initial Sacrificial Armor / Shield support
+
+---
+
+## [0.0.x]
+### Added
+- Combat workflow foundation.
+- Early Apply/Undo state tracking.
+- Initial hit-location-aware damage handling.
+- Early reaction, Reach, and Guard support.
 
 ---
 
 ## Versioning notes
 - `v0.0.x`: combat workflow foundation
 - `v0.1.x`: first stable combat QoL milestone
-- `v0.2.x`: expanded combat card support, stronger Reach handling, and cleaner native dialog integration
-- future releases: broader integration layers, optional engagement/zones support, and more contextual helpers
+- `v0.2.x`: mature combat chat workflow, native-card support, inline reactions, and major UI cleanup
+- `v0.3.x`: planned metacurrency-aware combat flow and broader automation

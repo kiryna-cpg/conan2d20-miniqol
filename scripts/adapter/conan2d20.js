@@ -71,9 +71,39 @@ export async function rollCombatDice(diceCount) {
   const n = Math.max(0, Number(diceCount ?? 0) || 0);
   if (!n) return { faces: [], total: 0, effects: 0 };
 
-  const roll = await (new Roll(`${n}d6`)).evaluate();
+  const roll = await (new Roll(`${n}dp`)).evaluate();
 
-  const faces = roll.dice?.[0]?.results?.map(r => Number(r.result)) ?? [];
+  if (game.modules?.get("dice-so-nice")?.active && game.dice3d) {
+    let whisper = null;
+    let blind = false;
+    const rollMode = game.settings?.get("core", "rollMode") ?? "roll";
+
+    switch (rollMode) {
+      case "blindroll":
+        blind = true;
+        break;
+      case "gmroll":
+        whisper = game.users?.filter((user) => user.isGM).map((user) => user.id) ?? null;
+        break;
+      case "roll":
+        whisper = game.users?.filter((user) => user.active).map((user) => user.id) ?? null;
+        break;
+      case "selfroll":
+        whisper = game.user?.id ? [game.user.id] : null;
+        break;
+      default:
+        break;
+    }
+
+    await game.dice3d.showForRoll(roll, game.user, true, whisper, blind);
+  }
+
+  const results =
+    roll.terms?.find((term) => Array.isArray(term?.results))?.results ??
+    roll.dice?.[0]?.results ??
+    [];
+
+  const faces = results.map((r) => Number(r.result) || 0);
   let total = 0;
   let effects = 0;
 
