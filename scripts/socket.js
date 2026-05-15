@@ -7,6 +7,7 @@ import {
 } from "./constants.js";
 import {
   execRollDamage,
+  execRerollDamage,
   execApplyDamage,
   execUndoDamage,
   promptSacrificialItemFromSocket,
@@ -155,6 +156,7 @@ async function withMessage(payload, callback) {
   if (
     [
       SOCKET_OPS.ROLL_DAMAGE,
+      SOCKET_OPS.REROLL_DAMAGE,
       SOCKET_OPS.APPLY,
       SOCKET_OPS.UNDO,
       SOCKET_OPS.APPLY_ALL,
@@ -178,6 +180,15 @@ async function withCombatant(payload, callback) {
 const SOCKET_HANDLERS = {
   [SOCKET_OPS.ROLL_DAMAGE]: async (payload) =>
     withMessage(payload, (message) => execRollDamage(message)),
+
+  [SOCKET_OPS.REROLL_DAMAGE]: async (payload) =>
+    withMessage(payload, (message) => {
+      const requester = getRequesterUser(payload);
+      if (!requester) return;
+      if (!(requester.isGM || message?.author?.id === requester.id)) return;
+
+      return execRerollDamage(message, payload.selectedIndices);
+    }),
 
   [SOCKET_OPS.APPLY]: async (payload) =>
     withMessage(payload, (message) => {
@@ -294,6 +305,14 @@ function emitSocket(op, payload = {}) {
 
 export function requestRollDamage(messageId) {
   emitSocket(SOCKET_OPS.ROLL_DAMAGE, { messageId });
+}
+
+export function requestRerollDamage(messageId, selectedIndices) {
+  emitSocket(SOCKET_OPS.REROLL_DAMAGE, {
+    messageId,
+    selectedIndices: Array.isArray(selectedIndices) ? selectedIndices : [],
+    requesterUserId: game.user?.id ?? null
+  });
 }
 
 export function requestApplyDamage(messageId, targetTokenUuid) {

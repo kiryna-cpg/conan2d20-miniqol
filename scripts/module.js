@@ -144,8 +144,9 @@ Hooks.once("init", async () => {
   registerSettings();
   registerSocket();
 
-  if (typeof loadTemplates === "function") {
-    await loadTemplates(TEMPLATE_PATHS);
+  const loadTemplatesFn = foundry.applications?.handlebars?.loadTemplates ?? globalThis.loadTemplates;
+  if (typeof loadTemplatesFn === "function") {
+    await loadTemplatesFn(TEMPLATE_PATHS);
   }
 
   registerCombatStateHooks();

@@ -9,6 +9,7 @@ export const FLAG_KEYS = {
 
 export const SOCKET_OPS = {
   ROLL_DAMAGE: "ROLL_DAMAGE",
+  REROLL_DAMAGE: "REROLL_DAMAGE",
   APPLY: "APPLY",
   UNDO: "UNDO",
   APPLY_ALL: "APPLY_ALL",

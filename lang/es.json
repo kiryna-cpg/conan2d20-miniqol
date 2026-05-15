@@ -17,7 +17,8 @@
       "DamageType": "Tipo de Daño",
       "MomentumSpends": "Gastos de Momentum",
       "NumberOfDice": "Número de dados",
-      "Effects": "Effects"
+      "Effects": "Effects",
+      "MomentumCommittedSummary": "gastado {spent}, reservado {banked}"
     },
     "Button": {
       "RollDamage": "Tirar daño",
@@ -35,6 +36,7 @@
       "Defend": "Defender",
       "GoToDefenseRoll": "Ir a la tirada de Defensa",
       "GoToAttackRoll": "Ir a la tirada de ataque",
+      "ReRollDamage": "Repetir daño",
       "Decline": "Rechazar"
     },
     "Tag": {
@@ -46,6 +48,13 @@
     "DamageType": {
       "Physical": "Físico",
       "Mental": "Mental"
+    },
+    "MomentumCommitted": {
+      "BreakGuard": "Romper Guardia: {target}",
+      "Penetration": "Penetración: ignora {value} de Soak",
+      "ReRollDamage": "Repetir daño",
+      "Banked": "Reservado en {pool}",
+      "BankedDetail": "Esta es la parte del Momentum generado que se ha enviado a la reserva tras confirmar el plan de gasto."
     },
     "MomentumSpend": {
       "BonusDamage": {
@@ -127,7 +136,9 @@
       "NoTargetsCaptured": "No hay objetivos sincronizados para este ataque. Selecciona o deselecciona objetivos en el lienzo y luego pulsa el botón de objetivo.",
       "DefendNeedsSingleTarget": "Sincroniza exactamente un objetivo en este ataque para habilitar Defender.",
       "ReactionUnavailableNoDoom": "{name} necesita {spent} Perdición para usar {reaction}. No hay suficiente Perdición en la reserva.",
-      "NoSacrificialCandidates": "No se ha encontrado armadura/escudo/arma equipado, intacto y sacrificable."
+      "NoSacrificialCandidates": "No se ha encontrado armadura/escudo/arma equipado, intacto y sacrificable.",
+      "MomentumActorMissing": "MiniQoL no ha podido resolver el actor para este gasto de Momentum.",
+      "MomentumAlreadyCommitted": "El Momentum de esta tirada ya ha sido gastado o enviado a la reserva."
     },
     "Chat": {
       "ReactionUnavailableTitle": "Reacción no disponible",
@@ -188,6 +199,15 @@
         "Title": "Deshacer todo el Daño",
         "Content": "¿Deshacer el daño para todos los objetivos aplicados?"
       },
+      "ApplyAfterDefenseSuccess": {
+        "Title": "Aplicar daño de todas formas",
+        "Content": "La tirada de defensa ha tenido éxito. ¿Seguro que quieres aplicar el daño?"
+      },
+      "ReRollDamage": {
+        "Title": "Repetir daño",
+        "Content": "Selecciona los dados de daño que quieres repetir. Esto cuesta 1 Momentum del remanente reservado.",
+        "ButtonConfirm": "Repetir"
+      },
       "Defend": {
         "Title": "Defender",
         "Content": "<strong>{defender}</strong> puede Defenderse frente a este ataque de tipo <strong>{attackType}</strong>. Esta reacción cuesta ahora mismo <strong>{cost}</strong> de Perdición. ¿Abrir la tirada defensiva nativa?"
@@ -215,6 +235,17 @@
       "BreakGuard": {
         "Title": "Romper Guardia",
         "Content": "¿Gastar 2 Momentum para Romper Guardia en <strong>{name}</strong>? (El objetivo pierde Guardia)"
+      },
+      "Momentum": {
+        "Title": "Gastar/Reservar Momentum",
+        "Content": "Asigna los <strong>{generated}</strong> puntos de Momentum generados por esta tirada.",
+        "BonusDamage": "Daño adicional (+1 daño por cada punto)",
+        "Penetration": "Penetración (ignora 2 de Soak cada uno)",
+        "Subdue": "Someter (el ataque gana No letal)",
+        "BreakGuard": "Objetivo de Romper Guardia (2 Momentum)",
+        "NoBreakGuard": "No gastar en Romper Guardia",
+        "Preview": "Gastas {spent}, reservas {banked}.",
+        "ButtonConfirm": "Confirmar"
       }
     },
 

@@ -1,105 +1,61 @@
-# Conan 2d20: Mini QoL
+# Conan 2d20 - Mini QoL
 
-Mini QoL is a focused combat companion for **Foundry VTT** and **Robert E. Howard’s Conan: Adventures in an Age Undreamed Of**.
+Mini QoL is a focused combat companion for **Foundry VTT v14** and **Robert E. Howard's Conan: Adventures in an Age Undreamed Of**.
 
-It keeps the Conan system’s native workflow and adds the missing glue for **targets, damage, reactions, Reach/Guard, and post-hit combat helpers**, centered on the chat cards players already use.
+It keeps the Conan system's native workflow and adds chat-card automation for targets, damage, reactions, Reach/Guard, Sacrificial Armor, and Momentum/Doom helper flows.
 
-## Current scope
+## v14 status
 
-Mini QoL is focused on **combat chat workflow and combat assistance**.
+- Foundry VTT: **v14**
+- Conan 2d20 system: **2.5.0**
+- Languages: English and Spanish
+- Reach Status is now integrated directly into Mini QoL.
 
-It is **not**:
-- a replacement for Argon or another combat HUD
-- a full action-economy manager
-- a full abstract-zones / engagement module
+The old standalone `conan2d20-reach-status` module should be disabled in v14 worlds to avoid duplicate Reach automation.
 
 ## Main features
 
-### Attack card improvements
-- Enriched **attack cards** with:
-  - target sync / clear
-  - inline **Defend**
-  - **Roll Damage**
-  - target-by-target **Apply / Undo**
-  - optional **Apply All / Undo All**
-  - inline **Break Guard**
-  - **Momentum Spends** reminder block
-- Damage state is surfaced directly in the target row.
-- Damage presentation stays visible on the original attack card.
+### Attack and damage chat workflow
+- Target sync / clear directly on attack and damage cards.
+- Inline **Defend**, **Roll Damage**, **Apply**, **Undo**, **Apply All**, and **Undo All** controls.
+- Conan-aware physical and mental damage application.
+- Safe Undo from stored `ChatMessage.flags` state.
+- GM-safe socket routing for player-side Apply/Undo requests.
 
-### Damage workflow
-- Chat-based **Roll Damage / Apply / Undo**
-- Conan-aware **physical** and **mental** damage application
-- Safe **Undo** from chat
-- One-apply-per-target protection until undone
-- Persistent message state stored in `ChatMessage.flags`
-- GM-safe socket routing for player-side Apply/Undo requests
-
-### Damage presentation
-- Expanded inline damage block on attack cards
-- Large damage summary matching the Conan damage presentation style
-- Combat dice breakdown
-- Number of dice
-- Hit location
-- Effects rolled
-- Momentum / Doom spent on damage
-- Weapon quality / effect tags when present
-
-### Native Conan damage cards
-- Mini QoL also enhances **native Conan damage cards**
-- Standalone damage cards are kept intentionally compact:
-  - targets
-  - Apply / Undo
-  - target sync / clear
-- Redundant duplicate damage presentation is removed from those standalone cards
+### Native Conan integration
+- Preserves the native Conan roll workflow.
+- Enhances native attack and damage cards without replacing the system sheets or rollers.
+- Uses Conan system data for damage, armor, stress, hit location, Doom, and Momentum workflows where available.
 
 ### Reactions
-- **Defend** is handled as an inline chat-card reaction
-- Linked defense roll cards show:
-  - Doom spent / paid for the reaction
-  - reaction result
-  - navigation back to the attack roll
-- Optional **Protect** support
-- **Retaliate** support
-- Native Conan roller routing is preserved for reaction flows
+- Inline **Defend** prompts on attack cards.
+- Linked defense roll summaries and navigation back to the original attack.
+- Optional Protect support.
+- Retaliate support.
+- Doom-cost validation for relevant reaction flows.
 
 ### Reach / Guard
-- Reach-aware difficulty assistance
-- Reach preview in native attack dialogs
-- Guard-aware handling
-- Lost Guard / Guard Broken handling
-- Inline **Break Guard** helper when eligible
+- Automatic Reach status icons on tokens.
+- Reach-aware difficulty assistance for melee attacks.
+- Reach preview in native attack dialogs.
+- Guard-aware handling and Break Guard helper.
+- Legacy Reach Status flags are read for migration compatibility.
 
 ### Hit location and Sacrificial Armor
-- Optional **Hit Location** support stored per target
-- **Sacrificial Armor / Shield** support uses Conan system coverage data
-- Armor loses coverage by struck location
-- Shields and sacrificed items are marked broken
-- Undo restores actor and item state
-- Optional sacrificial weapons support
-
-### Languages
-- UI strings and visible combat labels are available in:
-  - **English**
-  - **Spanish**
-
-## Typical flow
-
-1. Make an attack with the normal Conan system workflow.
-2. Use the target button on the chat card:
-   - if stored targets exist, clicking clears them
-   - if there are no stored targets, clicking captures the current canvas targets
-3. If the attack can be defended, the card shows **Defend** inline.
-4. Use **Roll Damage** from the same attack card.
-5. Review the inline damage block and Momentum reminder.
-6. **Apply / Undo** damage per target, or use **Apply All / Undo All** when appropriate.
+- Optional hit location support stored per target.
+- Sacrificial Armor / Shield support using Conan system coverage data.
+- Undo restores actor and item state.
+- Optional sacrificial weapon support.
 
 ## Recommended settings
 
-**World Settings → Conan 2d20: Mini QoL**
+World Settings → **Conan 2d20 - Mini QoL**
 
-Good baseline setup:
+Suggested baseline:
+
 - **Auto Reach Difficulty**: ON
+- **Enable Reach Status icons**: ON
+- **Show Reach 1 icon**: table preference
 - **Use Hit Location**: ON
 - **Enable Sacrificial Armor**: ON
 - **Automatic Protect reaction**: OFF
@@ -108,33 +64,29 @@ Good baseline setup:
 
 ## Requirements
 
-- **Foundry VTT**: `13.351`
-- **Conan 2d20 system**: `2.4.3`
+- Foundry VTT: `14`
+- Conan 2d20 system: `2.5.0`
 
 ## Installation
 
-1. Foundry → **Add-on Modules** → **Install Module**
-2. Paste this manifest URL:
+Install with this manifest URL:
 
-   `https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json`
+```txt
+https://raw.githubusercontent.com/kiryna-cpg/conan2d20-miniqol/main/module.json
+```
 
-3. Install the module
-4. Enable **Conan 2d20: Mini QoL** in your world
-5. **Reload Application**
-
-## Notes
-
-- Mini QoL is designed specifically for the **Conan 2d20** Foundry system.
-- The chat controls survive **Reload Application** because state is stored in message flags.
-- Reach-sensitive logic uses current scene/token context today and can later integrate with an external engagement provider.
-- Native Conan damage cards can also receive Mini QoL controls.
-- The module is intentionally chat-card driven: it complements the system’s native dialogs rather than replacing them.
+After updating from v13, do a full Foundry application reload. Disable `conan2d20-reach-status` if it is still active.
 
 ## Support
 
-- Issues: `https://github.com/kiryna-cpg/conan2d20-miniqol/issues`
-- Repo: `https://github.com/kiryna-cpg/conan2d20-miniqol`
+Report issues at:
+
+```txt
+https://github.com/kiryna-cpg/conan2d20-miniqol/issues
+```
+
+Include Foundry version, Conan system version, active companion modules, reproduction steps, and console logs.
 
 ## License
 
-MIT
+MIT.
