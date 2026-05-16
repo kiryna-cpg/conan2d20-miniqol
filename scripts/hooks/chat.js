@@ -1,6 +1,7 @@
 import { MODULE_ID, SETTING_KEYS, REACTION_KINDS, ATTACK_TYPES } from "../constants.js";
 import {
   requestRollDamage,
+  requestRerollDamage,
   requestApplyDamage,
   requestUndoDamage,
   requestApplyAll,
@@ -10,11 +11,17 @@ import {
 } from "../socket.js";
 import {
   execRollDamage,
+  execRerollDamage,
   execApplyDamage,
   execUndoDamage,
   execUndoAll
 } from "../workflows/damage-workflow.js";
 import { execBreakGuard } from "../workflows/guard-workflow.js";
+import {
+  getMomentumPlan,
+  hasCommittedMomentumPlan,
+  openMomentumSpendDialog
+} from "../workflows/momentum-workflow.js";
 import {
   ensureMessageFlags,
   isAttackMessage,
@@ -33,6 +40,7 @@ import { consumeReactionRollUiFusionForUser } from "../state/reaction-roll-ui-st
 
 let _hooksRegistered = false;
 let _delegatedBound = false;
+let _nativeMomentumInterceptBound = false;
 
 function hasActiveGM() {
   return game.users?.some((user) => user.active && user.isGM);
@@ -72,6 +80,35 @@ function getChatScrollContainer() {
     ?? document.querySelector?.("#chat-log")
     ?? document.querySelector?.(".chat-log")
     ?? null;
+}
+
+function bindNativeMomentumInterceptOnce() {
+  if (_nativeMomentumInterceptBound) return;
+  _nativeMomentumInterceptBound = true;
+
+  document.addEventListener("click", async (event) => {
+    const button = event.target?.closest?.(".chat-bank-momentum");
+    if (!button) return;
+
+    const messageNode = button.closest?.(".chat-message[data-message-id], li.chat-message[data-message-id]");
+    const messageId = messageNode?.dataset?.messageId ?? null;
+    if (!messageId) return;
+
+    const message = game.messages?.get(messageId) ?? null;
+    if (!message) return;
+
+    if (!(game.user?.isGM === true || message?.author?.id === game.user?.id)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
+    if (!message.flags?.[MODULE_ID]) {
+      await ensureMessageFlags(message);
+    }
+
+    await openMomentumSpendDialog(game.messages?.get(messageId) ?? message);
+  }, true);
 }
 
 function keepLatestMessageInView(messageId) {
@@ -573,15 +610,92 @@ function makeMomentumSpendRow(key, { highlighted = false } = {}) {
 }
 
 function buildMomentumSpendView(message, flags, reaction, targetRows) {
-  const momentum = getMessageMomentum(message);
-  if (momentum <= 0) {
+  const plan = getMomentumPlan(flags, message);
+
+  if (plan.generated <= 0) {
     return { visible: false, momentum: 0, rows: [] };
+  }
+
+  if (plan.committed) {
+    const rows = [];
+
+    if ((Number(plan.allocations?.penetration ?? 0) || 0) > 0) {
+      rows.push({
+        cost: String(plan.allocations.penetration),
+        title: game.i18n.format("C2MQ.MomentumCommitted.Penetration", {
+          value: (Number(plan.allocations.penetration ?? 0) || 0) * 2
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.Penetration.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (plan.allocations?.subdue === true) {
+      rows.push({
+        cost: "1",
+        title: game.i18n.localize("C2MQ.MomentumSpend.Subdue.Title"),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.Subdue.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (plan.allocations?.rerollDamage?.used === true) {
+      rows.push({
+        cost: String(plan.allocations.penetration),
+        title: game.i18n.format("C2MQ.MomentumCommitted.Penetration", {
+          value: (Number(plan.allocations.penetration ?? 0) || 0) * 2
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.Penetration.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (plan.allocations?.rerollDamage?.used === true) {
+      rows.push({
+        cost: "1",
+        title: game.i18n.localize("C2MQ.MomentumCommitted.ReRollDamage"),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.ReRollDamage.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (plan.allocations?.breakGuard?.tokenUuid) {
+      rows.push({
+        cost: "2",
+        title: game.i18n.format("C2MQ.MomentumCommitted.BreakGuard", {
+          target: plan.allocations.breakGuard.targetName ?? "Target"
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.BreakGuard.Detail"),
+        highlighted: true
+      });
+    }
+
+    if ((Number(plan.banked ?? 0) || 0) > 0) {
+      rows.push({
+        cost: String(plan.banked),
+        title: game.i18n.format("C2MQ.MomentumCommitted.Banked", {
+          pool: game.i18n.localize(plan.bankType === "doom" ? "CONAN.doom" : "CONAN.momentum")
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumCommitted.BankedDetail"),
+        highlighted: false
+      });
+    }
+
+    return {
+      visible: rows.length > 0,
+      momentum: game.i18n.format("C2MQ.Label.MomentumCommittedSummary", {
+        spent: Number(plan.spent ?? 0) || 0,
+        banked: Number(plan.banked ?? 0) || 0
+      }),
+      rows
+    };
   }
 
   if (reaction.blocksDamage || reaction.outcomeMiss) {
     return { visible: false, momentum: 0, rows: [] };
   }
 
+  const momentum = Number(plan.generated ?? 0) || 0;
   const attackType = getAttackTypeForMessage(message, flags);
   const isThreaten = attackType === ATTACK_TYPES.THREATEN;
   const isPhysical = String(flags?.damage?.type ?? "physical").trim().toLowerCase() === "physical";
@@ -589,13 +703,9 @@ function buildMomentumSpendView(message, flags, reaction, targetRows) {
   const hasDamageDice = Array.isArray(flags?.damage?.faces) && flags.damage.faces.length > 0;
   const hasSingleTarget = targetRows.length === 1;
 
-  const breakGuardAvailable = targetRows.some((row) => row.canBreakGuard === true);
-
-  // Conservative highlighting:
-  // highlight only when the current card context clearly supports the spend.
   const rows = [
     makeMomentumSpendRow("BonusDamage", { highlighted: true }),
-    makeMomentumSpendRow("BreakGuard", { highlighted: breakGuardAvailable }),
+    makeMomentumSpendRow("BreakGuard", { highlighted: targetRows.length > 0 }),
     makeMomentumSpendRow("CalledShot", { highlighted: isPhysical && !hasRolledDamage }),
     makeMomentumSpendRow("ChangeStance", { highlighted: true }),
     makeMomentumSpendRow("Confidence", { highlighted: true }),
@@ -688,8 +798,11 @@ async function injectMinQolBlock(message, root) {
   const targets = flags.targets ?? [];
   const applied = flags.applied ?? {};
   const hitByTarget = flags.hitLocation?.byTarget ?? {};
+  const momentumCommitted = hasCommittedMomentumPlan(flags);
+
   const canBreakGuardOperate = canUserOperateBreakGuard(liveMessage);
   const showBreakGuardHelper =
+    false;
     !!game.settings.get(MODULE_ID, SETTING_KEYS.PROMPT_BREAK_GUARD) &&
     canBreakGuardOperate &&
     getMessageMomentum(liveMessage) >= 2 &&
@@ -722,7 +835,7 @@ async function injectMinQolBlock(message, root) {
       canApply: canApplyOperate && flags.damage?.rolled && !appliedToTarget && !reaction.blocksDamage && !reaction.outcomeMiss,
       canUndo: canUndoOperate && appliedToTarget && !reaction.blocksDamage && !reaction.outcomeMiss,
       canRemove: canApplyOperate && !appliedToTarget,
-      canBreakGuard: showBreakGuardHelper && !!actor && !guardBroken && !breakGuardApplied
+      canBreakGuard: false
     };
   }));
 
@@ -749,6 +862,18 @@ async function injectMinQolBlock(message, root) {
     !reaction.blocksDamage &&
     !reaction.outcomeMiss;
 
+  const momentumPlan = getMomentumPlan(flags, liveMessage);
+  const showRerollDamage =
+    (game.user?.isGM === true || liveMessage?.author?.id === game.user?.id) &&
+    flags.damage?.rolled === true &&
+    Array.isArray(flags.damage?.faces) &&
+    flags.damage.faces.length > 0 &&
+    momentumPlan.committed === true &&
+    (Number(momentumPlan.banked ?? 0) || 0) >= 1 &&
+    momentumPlan.allocations?.rerollDamage?.used !== true &&
+    !reaction.blocksDamage &&
+    !reaction.outcomeMiss;
+
   const data = {
     messageId: liveMessage.id,
     canRollDamage:
@@ -758,6 +883,7 @@ async function injectMinQolBlock(message, root) {
     damage: flags.damage ?? { rolled: false },
     damageDetail: buildDamageDetailView(flags),
     momentumSpends: buildMomentumSpendView(liveMessage, flags, reaction, targetRows),
+    showRerollDamage,
     reaction,
     standaloneDamageCard,
     targetRows,
@@ -765,7 +891,7 @@ async function injectMinQolBlock(message, root) {
     hasTargets: targetRows.length > 0,
     showApplyAll: standaloneDamageCard ? false : showApplyAll,
     showUndoAll: standaloneDamageCard ? false : showUndoAll,
-    canSetTargets: canApplyOperate,
+    canSetTargets: canApplyOperate && !momentumCommitted,
     isFallback: !liveMessage.flags?.[MODULE_ID]
   };
 
@@ -779,6 +905,8 @@ async function injectMinQolBlock(message, root) {
 function bindDelegatedClicksOnce() {
   if (_delegatedBound) return;
   _delegatedBound = true;
+
+  bindNativeMomentumInterceptOnce();
 
   document.addEventListener("click", async (event) => {
     const button = event.target?.closest?.(".c2d20-miniqol button[data-action]");
@@ -830,6 +958,23 @@ function bindDelegatedClicksOnce() {
         null;
 
       await focusChatMessage(attackMessageId);
+      return;
+    }
+
+    if (action === "reroll-damage") {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (useSocket) {
+        requestRerollDamage(messageId, []);
+        return;
+      }
+
+      const canWrite = game.user?.isGM === true || message?.author?.id === game.user?.id;
+      if (!message.flags?.[MODULE_ID] && canWrite) await ensureMessageFlags(message);
+
+      const fresh = game.messages?.get(messageId) ?? message;
+      await execRerollDamage(fresh);
       return;
     }
 

@@ -108,6 +108,19 @@
           {{/if}}
         </div>
 
+        {{#if showRerollDamage}}
+          <div class="c2mq-row c2mq-reroll-damage">
+            <button
+              type="button"
+              class="c2mq-btn c2mq-btn-icon c2mq-btn-reroll-damage"
+              data-action="reroll-damage"
+              data-tooltip="{{localize "C2MQ.Button.ReRollDamage"}}"
+              aria-label="{{localize "C2MQ.Button.ReRollDamage"}}">
+              <i class="fa-solid fa-dice" aria-hidden="true"></i>
+            </button>
+          </div>
+        {{/if}}
+
         {{#if damageDetail.hasEffectTags}}
           <div class="c2mq-tag-list">
             {{#each damageDetail.effectTags}}

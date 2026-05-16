@@ -1,4 +1,6 @@
 import { MODULE_ID, SETTING_KEYS, SOCKET_NAME, SOCKET_OPS } from "../constants.js";
+import { getCommittedBonusDamage, getCommittedPenetration, getCommittedSubdue } from "./momentum-workflow.js";
+import { adjustPoolValue } from "../adapter/pool-tracker.js";
 import {
   debugEnabled,
   getHitLocationEnabled,
@@ -26,13 +28,13 @@ function isAuthoritativeForApplyWorkflow(message) {
   return message?.author?.id === game.user?.id;
 }
 
-async function openDamageRollerDialog({ itemName, baseDice, defaultAttackType }) {
+async function openDamageRollerDialog({ itemName, baseDice, defaultAttackType, committedMomentumBonus = 0 }) {
   const state = {
     attackType: defaultAttackType ?? "melee",
     baseDice: Math.max(1, Number(baseDice ?? 1) || 1),
     bonusOther: 0,
     bonusTalent: 0,
-    spendMomentum: 0,
+    spendMomentum: Math.max(0, Number(committedMomentumBonus ?? 0) || 0),
     spendDoom: 0
   };
 
@@ -97,7 +99,7 @@ async function openDamageRollerDialog({ itemName, baseDice, defaultAttackType })
             <div class="quantity-down"><i class="fa-regular fa-square-minus"></i></div>
           </div>
 
-          <div class="damage-roller quantity-grid" data-quantity-type="spends.momentum">
+          <div class="damage-roller quantity-grid disable-entry" data-quantity-type="spends.momentum">
             <div class="quantity-header">${game.i18n.localize("C2MQ.DamageRoller.Spend.Momentum")}</div>
             <input type="number" min="0" step="1" value="0" data-quantity-type="spends.momentum" disabled="">
             <div class="quantity-up"><i class="fa-regular fa-square-plus"></i></div>
@@ -158,7 +160,11 @@ async function openDamageRollerDialog({ itemName, baseDice, defaultAttackType })
             if (!d || !key) return;
             if (key === "bonus.other") state.bonusOther = Math.max(0, state.bonusOther + d);
             else if (key === "bonus.talent") state.bonusTalent = Math.max(0, state.bonusTalent + d);
-            else if (key === "spends.momentum") state.spendMomentum = Math.max(0, state.spendMomentum + d);
+            else if (key === "spends.momentum") {
+              // Momentum spent on the attack is now committed from the message-scoped
+              // Spend/Bank dialog. Do not allow free ad-hoc momentum here.
+              state.spendMomentum = Math.max(0, Number(committedMomentumBonus ?? 0) || 0);
+            }
             else if (key === "spends.doom") state.spendDoom = Math.max(0, state.spendDoom + d);
 
             setInput("bonus.other", state.bonusOther);
@@ -192,6 +198,73 @@ async function openDamageRollerDialog({ itemName, baseDice, defaultAttackType })
     );
 
     dlg.render(true);
+  });
+}
+
+function summarizeCombatFaces(faces = []) {
+  const list = Array.isArray(faces) ? faces.map((f) => Number(f) || 0) : [];
+  let total = 0;
+  let effects = 0;
+
+  for (const f of list) {
+    if (f === 1) total += 1;
+    else if (f === 2) total += 2;
+    else if (f === 5 || f === 6) {
+      total += 1;
+      effects += 1;
+    }
+  }
+
+  return { faces: list, total, effects };
+}
+
+function canUseRerollDamage(flags) {
+  const plan = flags?.momentum ?? {};
+  const rerollUsed = plan?.allocations?.rerollDamage?.used === true;
+  const banked = Math.max(0, Number(plan?.banked ?? 0) || 0);
+  const faces = Array.isArray(flags?.damage?.faces) ? flags.damage.faces : [];
+
+  return (
+    flags?.damage?.rolled === true &&
+    faces.length > 0 &&
+    plan?.committed === true &&
+    banked >= 1 &&
+    !rerollUsed
+  );
+}
+
+async function openRerollDamageDialog(flags) {
+  const faces = Array.isArray(flags?.damage?.faces) ? flags.damage.faces : [];
+  if (!faces.length) return null;
+
+  const content = `
+    <div class="dialog">
+      <div class="dialog-content">
+        <p>${game.i18n.localize("C2MQ.Dialog.ReRollDamage.Content")}</p>
+        <div class="c2mq-reroll-dice-grid">
+          ${faces.map((face, index) => `
+            <label class="c2mq-reroll-die">
+              <input type="checkbox" name="rerollIndex" value="${index}">
+              <span class="roll-list-entry roll d6-combat${Number(face) || 0}">${Number(face) || 0}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+
+  return await Dialog.prompt({
+    title: game.i18n.localize("C2MQ.Dialog.ReRollDamage.Title"),
+    content,
+    label: game.i18n.localize("C2MQ.Dialog.ReRollDamage.ButtonConfirm"),
+    callback: (html) => {
+      const root = html?.[0] ?? html;
+      const selected = Array.from(root?.querySelectorAll?.('input[name="rerollIndex"]:checked') ?? [])
+        .map((input) => Number(input.value))
+        .filter((n) => Number.isInteger(n) && n >= 0);
+
+      return selected.length ? selected : null;
+    }
   });
 }
 
@@ -845,8 +918,16 @@ export async function execRollDamage(message) {
   const weaponType = String(sysItem?.system?.weaponType ?? "");
   const defaultAttackType = sysItemType === "display" ? "threaten" : weaponType === "ranged" ? "ranged" : "melee";
   const itemName = sysItem?.name ?? flags.context?.itemName ?? game.i18n.localize("C2MQ.DamageRoller.Title");
+  const committedMomentumBonus = getCommittedBonusDamage(flags);
+  const committedPenetration = getCommittedPenetration(flags);
+  const committedSubdue = getCommittedSubdue(flags);
 
-  const params = await openDamageRollerDialog({ itemName, baseDice: spec.dice, defaultAttackType });
+  const params = await openDamageRollerDialog({
+    itemName,
+    baseDice: spec.dice,
+    defaultAttackType,
+    committedMomentumBonus
+  });
   if (!params) return;
 
   const diceTotal = Math.max(1, (Number(params.baseDice ?? spec.dice) || spec.dice) + (Number(params.bonusOther ?? 0) || 0) + (Number(params.bonusTalent ?? 0) || 0));
@@ -887,9 +968,9 @@ export async function execRollDamage(message) {
     effects: rolled.effects ?? 0,
     faces: rolled.faces ?? [],
     type: normalizedDamageType,
-    ignoreSoak: qualityMeta.ignoreSoak,
+    ignoreSoak: qualityMeta.ignoreSoak + (committedPenetration * 2),
     intense: qualityMeta.intense,
-    nonlethal: qualityMeta.nonlethal,
+    nonlethal: qualityMeta.nonlethal || committedSubdue === true,
     qualityBonusDamage: qualityMeta.bonusDamage,
     attackType: params.attackType ?? defaultAttackType,
     bonus: {
@@ -906,6 +987,106 @@ export async function execRollDamage(message) {
   await setFlags(message, next);
   try { ui.chat?.render?.(true); } catch (_e) {}
   if (debugEnabled()) console.debug(`[${MODULE_ID}] rollDamage`, { messageId: message.id, spec, rolled, total, hitLocationEnabled });
+}
+
+async function confirmApplyAfterSuccessfulDefense(flags) {
+  const reaction = flags?.reaction ?? {};
+  const kind = String(reaction.kind ?? "").trim().toLowerCase();
+  const phase = String(reaction.phase ?? "").trim().toLowerCase();
+  const outcome = String(reaction.outcome ?? "").trim().toLowerCase();
+  const defenseSuccesses = Math.max(0, Number(reaction.defenseSuccesses ?? 0) || 0);
+
+  // Only prompt when a Defend roll was successful on its own terms
+  // (it generated successes) but the struggle still resolved as a hit.
+  if (kind !== "defend") return true;
+  if (phase !== "resolved") return true;
+  if (outcome !== "hit") return true;
+  if (defenseSuccesses <= 0) return true;
+
+  return await Dialog.confirm({
+    title: game.i18n.localize("C2MQ.Dialog.ApplyAfterDefenseSuccess.Title"),
+    content: `<p>${game.i18n.localize("C2MQ.Dialog.ApplyAfterDefenseSuccess.Content")}</p>`,
+    defaultYes: false
+  });
+}
+
+export async function execRerollDamage(message, selectedIndices = null) {
+  if (!message) return;
+
+  const flags = getFlags(message);
+  if (!flags || !canUseRerollDamage(flags)) return;
+
+  let indices = Array.isArray(selectedIndices) ? selectedIndices : null;
+  if (!indices?.length) {
+    indices = await openRerollDamageDialog(flags);
+  }
+  if (!indices?.length) return;
+
+  const uniqueIndices = [...new Set(indices)]
+    .map((n) => Number(n))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n < (flags.damage?.faces?.length ?? 0))
+    .sort((a, b) => a - b);
+
+  if (!uniqueIndices.length) return;
+
+  const rerolled = await rollCombatDice(uniqueIndices.length);
+  const nextFaces = Array.isArray(flags.damage?.faces) ? [...flags.damage.faces] : [];
+
+  uniqueIndices.forEach((faceIndex, i) => {
+    nextFaces[faceIndex] = Number(rerolled.faces?.[i] ?? nextFaces[faceIndex] ?? 0) || 0;
+  });
+
+  const summary = summarizeCombatFaces(nextFaces);
+  const damageType = normalizeDamageType(flags.damage?.type ?? "physical");
+  const sysItem = message?.flags?.data?.item ?? null;
+  const qualityMeta = buildDamageQualityMeta(sysItem, {
+    damageType,
+    effects: summary.effects
+  });
+
+  const next = normalizeTokenKeyedFlags(flags);
+  const currentStatic = Number(next.damage?.static ?? 0) || 0;
+  const currentMomentumSpent = Number(next.damage?.spends?.momentum ?? 0) || 0;
+  const penetration = getCommittedPenetration(next);
+
+  next.damage = {
+    ...next.damage,
+    faces: summary.faces,
+    effects: summary.effects,
+    total: summary.total + currentStatic,
+    ignoreSoak: qualityMeta.ignoreSoak + (penetration * 2),
+    intense: qualityMeta.intense,
+    nonlethal: qualityMeta.nonlethal,
+    qualityBonusDamage: qualityMeta.bonusDamage,
+    spends: {
+      ...(next.damage?.spends ?? {}),
+      momentum: currentMomentumSpent + 1
+    }
+  };
+
+  next.momentum = foundry.utils.duplicate(next.momentum ?? {});
+  next.momentum.spent = Math.max(0, Number(next.momentum.spent ?? 0) || 0) + 1;
+  next.momentum.banked = Math.max(0, (Number(next.momentum.banked ?? 0) || 0) - 1);
+  next.momentum.allocations = {
+    ...(next.momentum.allocations ?? {}),
+    rerollDamage: {
+      used: true,
+      spent: 1,
+      dice: uniqueIndices.length
+    }
+  };
+
+  await message.update({ [`flags.${MODULE_ID}`]: next });
+
+  if (next.momentum.bankType) {
+    await adjustPoolValue(next.momentum.bankType, -1);
+  }
+
+  try {
+    ui.chat?.render?.(true);
+  } catch (_e) {
+    // Ignore chat re-render failures.
+  }
 }
 
 export async function execApplyDamage(message, targetTokenUuid, { applyAll = false } = {}) {
@@ -935,6 +1116,9 @@ async function _applyToSingle(message, tokenUuid) {
     ui.notifications.warn(game.i18n.localize("C2MQ.Warn.TargetMissing"));
     return;
   }
+
+  const confirmedAfterDefense = await confirmApplyAfterSuccessfulDefense(flags);
+  if (!confirmedAfterDefense) return;
 
   const damageType = normalizeDamageType(flags.damage?.type ?? "physical");
   const baseDamageTotal = Number(flags.damage?.total ?? 0) || 0;

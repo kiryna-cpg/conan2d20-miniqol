@@ -289,6 +289,7 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
   const data = message?.flags?.data ?? {};
   const actorId = data?.actor?._id ?? data?.rollData?.actorId ?? null;
   const actorUuid = actorId ? `Actor.${actorId}` : null;
+  const actor = actorId ? game.actors?.get(actorId) ?? null : null;
 
   const sceneId = message?.speaker?.scene ?? null;
   const tokenId = message?.speaker?.token ?? null;
@@ -352,6 +353,23 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
       cost: 0,
       costApplied: false,
       resolvedByMessageId: null
+    },
+    momentum: {
+      schema: 1,
+      committed: false,
+      generated: pickNumber(data?.results?.momentum, 0) ?? 0,
+      spent: 0,
+      banked: 0,
+      bankType: String(actor?.type ?? "").trim().toLowerCase() === "npc" ? "doom" : "momentum",
+      committedAt: null,
+      committedByUserId: null,
+      allocations: {
+        bonusDamage: 0,
+        penetration: 0,
+        subdue: false,
+        rerollDamage: null,
+        breakGuard: null
+      }
     },
     applied: {}
   };
