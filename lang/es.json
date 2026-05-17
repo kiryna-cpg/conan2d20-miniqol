@@ -6,7 +6,7 @@
       "SacrificialArmorBroken": "{item} pierde la cobertura en {location} y ahora queda Rota.",
       "SacrificialShieldBroken": "{item} se sacrifica y ahora queda Roto.",
       "SacrificialWeaponBroken": "{item} se sacrifica y ahora queda Rota."
-    },    
+    },
     "Label": {
       "Damage": "Daño",
       "DamagePending": "Daño pendiente",
@@ -44,7 +44,7 @@
       "BonusDamage": "Daño extra +{value}",
       "Intense": "Intenso",
       "Nonlethal": "No letal"
-    },    
+    },
     "DamageType": {
       "Physical": "Físico",
       "Mental": "Mental"
@@ -54,7 +54,9 @@
       "Penetration": "Penetración: ignora {value} de Soak",
       "ReRollDamage": "Repetir daño",
       "Banked": "Reservado en {pool}",
-      "BankedDetail": "Esta es la parte del Momentum generado que se ha enviado a la reserva tras confirmar el plan de gasto."
+      "BankedDetail": "Esta es la parte del Momentum generado que se ha enviado a la reserva tras confirmar el plan de gasto.",
+      "BonusDamage": "Daño adicional: +{value}",
+      "CalledShot": "Ataque localizado: {location}"
     },
     "MomentumSpend": {
       "BonusDamage": {
@@ -138,7 +140,8 @@
       "ReactionUnavailableNoDoom": "{name} necesita {spent} Perdición para usar {reaction}. No hay suficiente Perdición en la reserva.",
       "NoSacrificialCandidates": "No se ha encontrado armadura/escudo/arma equipado, intacto y sacrificable.",
       "MomentumActorMissing": "MiniQoL no ha podido resolver el actor para este gasto de Momentum.",
-      "MomentumAlreadyCommitted": "El Momentum de esta tirada ya ha sido gastado o enviado a la reserva."
+      "MomentumAlreadyCommitted": "El Momentum de esta tirada ya ha sido gastado o enviado a la reserva.",
+      "LegacyReachStatusActive": "El módulo independiente Conan 2d20 - Reach Status está activo. La sincronización de Reach Status de MiniQoL se desactiva para evitar hooks duplicados."
     },
     "Chat": {
       "ReactionUnavailableTitle": "Reacción no disponible",
@@ -169,7 +172,6 @@
       },
       "RollDice": "Tirar Dados"
     },
-
     "Err": {
       "StressPathMissing": "No se ha encontrado el campo de Stress en este actor (mira la consola con Debug)."
     },
@@ -189,7 +191,7 @@
         "ResolvedHit": "Reacción Proteger: el protegido es golpeado",
         "ResolvedFailed": "Reacción Proteger falla: el objetivo original es golpeado"
       }
-    },   
+    },
     "Dialog": {
       "Undo": {
         "Title": "Undo Damage",
@@ -220,18 +222,18 @@
         "Title": "Represalia",
         "Content": "<strong>{retaliator}</strong> puede realizar una Represalia contra <strong>{target}</strong> usando <strong>{weapon}</strong>. Esta reacción cuesta ahora mismo <strong>{cost}</strong> de Perdición. ¿Abrir el ataque cuerpo a cuerpo nativo?"
       },
-    "Sacrificial": {
-      "Title": "Sacrificar Equipo",
-      "Content": "¿Sacrificas una pieza de tu equipo para ignorar 1 Herida (una vez por escena)?",
-      "SelectLabel": "Elige qué equipo sacrificar",
-      "ButtonSacrifice": "Sacrificar",
-      "ButtonCancel": "No sacrificar",
-      "Kind": {
-        "Armor": "Armadura",
-        "Shield": "Escudo",
-        "Weapon": "Arma"
-      }
-    },
+      "Sacrificial": {
+        "Title": "Sacrificar Equipo",
+        "Content": "¿Sacrificas una pieza de tu equipo para ignorar 1 Herida (una vez por escena)?",
+        "SelectLabel": "Elige qué equipo sacrificar",
+        "ButtonSacrifice": "Sacrificar",
+        "ButtonCancel": "No sacrificar",
+        "Kind": {
+          "Armor": "Armadura",
+          "Shield": "Escudo",
+          "Weapon": "Arma"
+        }
+      },
       "BreakGuard": {
         "Title": "Romper Guardia",
         "Content": "¿Gastar 2 Momentum para Romper Guardia en <strong>{name}</strong>? (El objetivo pierde Guardia)"
@@ -245,10 +247,11 @@
         "BreakGuard": "Objetivo de Romper Guardia (2 Momentum)",
         "NoBreakGuard": "No gastar en Romper Guardia",
         "Preview": "Gastas {spent}, reservas {banked}.",
-        "ButtonConfirm": "Confirmar"
+        "ButtonConfirm": "Confirmar",
+        "CalledShot": "Ataque localizado (elige localización, 2 Momentum)",
+        "NoCalledShot": "Sin ataque localizado"
       }
     },
-
     "Reach": {
       "NoteNoTarget": "No hay objetivo seleccionado; no se aplica el ajuste automático por Reach.",
       "NoteMultiTarget": "Hay múltiples objetivos seleccionados; no se aplica el ajuste automático por Reach.",
@@ -302,6 +305,28 @@
       "SacrificialWeapons": {
         "Name": "Permitir Sacrificar Armas (homebrew)",
         "Hint": "Si está activo, la regla de Armadura Sacrificial también puede romper un arma equipada si no hay armadura/escudo disponible."
+      },
+      "ReachStatusEnabled": {
+        "Name": "Activar sincronización de Reach Status",
+        "Hint": "Integra los iconos de Reach en MiniQoL y sincroniza automáticamente Reach 1-3/Sin Reach en los tokens."
+      },
+      "ShowReach1Status": {
+        "Name": "Mostrar icono de Reach 1",
+        "Hint": "Si se desactiva, Reach 1 no se aplicará automáticamente. Reach 2-3 y Sin Reach seguirán disponibles."
+      }
+    },
+    "ReachStatus": {
+      "Name": {
+        "Reach1": "Reach 1",
+        "Reach2": "Reach 2",
+        "Reach3": "Reach 3",
+        "NoReach": "Sin Reach"
+      },
+      "Tooltip": {
+        "Reach1": "Estado automático de Reach 1.",
+        "Reach2": "Estado automático de Reach 2.",
+        "Reach3": "Estado automático de Reach 3.",
+        "NoReach": "Anulación manual que suprime el Reach automático."
       }
     }
   }

@@ -1,10 +1,81 @@
-import { MODULE_ID } from "../constants.js";
+import { MODULE_ID, SETTING_KEYS } from "../constants.js";
 import { adjustPoolValue } from "../adapter/pool-tracker.js";
 import { execBreakGuard } from "./guard-workflow.js";
 
 function toInt(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : fallback;
+}
+
+function safeTokenKey(tokenUuid) {
+  const raw = String(tokenUuid ?? "");
+  return encodeURIComponent(raw).replaceAll(".", "%2E");
+}
+
+const CALLED_SHOT_LOCATIONS = [
+  { key: "head", labelKey: "CONAN.Item.Armor.Coverage.Head" },
+  { key: "torso", labelKey: "CONAN.Item.Armor.Coverage.Torso" },
+  { key: "rarm", labelKey: "CONAN.Item.Armor.Coverage.RightArm" },
+  { key: "larm", labelKey: "CONAN.Item.Armor.Coverage.LeftArm" },
+  { key: "rleg", labelKey: "CONAN.Item.Armor.Coverage.RightLeg" },
+  { key: "lleg", labelKey: "CONAN.Item.Armor.Coverage.LeftLeg" }
+];
+
+function localizeCoverageKey(locationKey) {
+  const labelKey = CONFIG.CONAN?.coverageTypes?.[locationKey]
+    ?? CALLED_SHOT_LOCATIONS.find((loc) => loc.key === locationKey)?.labelKey
+    ?? locationKey;
+  return game.i18n.localize(labelKey);
+}
+
+function getCalledShotLocation(locationKey) {
+  const key = String(locationKey ?? "").trim();
+  if (!CALLED_SHOT_LOCATIONS.some((loc) => loc.key === key)) return null;
+
+  return {
+    d20: null,
+    key,
+    label: localizeCoverageKey(key),
+    source: "calledShot"
+  };
+}
+
+function buildCalledShotOptions() {
+  return [
+    `<option value="">${game.i18n.localize("C2MQ.Dialog.Momentum.NoCalledShot")}</option>`,
+    ...CALLED_SHOT_LOCATIONS.map((loc) =>
+      `<option value="${loc.key}">${foundry.utils.escapeHTML(localizeCoverageKey(loc.key))}</option>`
+    )
+  ].join("");
+}
+
+function hasAppliedDamage(flags) {
+  const stack = [flags?.applied ?? {}];
+  while (stack.length) {
+    const current = stack.pop();
+    if (!current || typeof current !== "object") continue;
+    if (current.state === "applied") return true;
+    stack.push(...Object.values(current));
+  }
+  return false;
+}
+
+function applyCalledShotToHitLocations(flags, calledShot) {
+  const hit = getCalledShotLocation(calledShot?.key);
+  if (!hit) return;
+
+  flags.hitLocation = {
+    ...(flags.hitLocation ?? {}),
+    enabled: true,
+    mode: "perTarget",
+    seed: foundry.utils.duplicate(hit),
+    byTarget: {}
+  };
+
+  for (const target of Array.isArray(flags.targets) ? flags.targets : []) {
+    if (!target?.tokenUuid) continue;
+    flags.hitLocation.byTarget[safeTokenKey(target.tokenUuid)] = foundry.utils.duplicate(hit);
+  }
 }
 
 function getMessageActor(message) {
@@ -42,6 +113,7 @@ function buildDefaultMomentumPlan(message, actor) {
       bonusDamage: 0,
       penetration: 0,
       subdue: false,
+      calledShot: null,
       rerollDamage: null,
       breakGuard: null
     }
@@ -60,9 +132,8 @@ export function getMomentumPlan(flags, message) {
     overwrite: true
   });
 
-  // Until the player confirms a spend/bank decision, the live system roll
-  // remains the source of truth for generated Momentum. MiniQoL flags only
-  // become authoritative once the plan is committed.
+  // Until the player confirms a spend/bank decision, the live roll remains
+  // the source of truth for generated Momentum.
   if (merged.committed !== true) {
     merged.generated = base.generated;
     if (!merged.bankType) merged.bankType = base.bankType;
@@ -74,6 +145,7 @@ export function getMomentumPlan(flags, message) {
       bonusDamage: 0,
       penetration: 0,
       subdue: false,
+      calledShot: null,
       rerollDamage: null,
       breakGuard: null
     };
@@ -98,6 +170,11 @@ export function getCommittedSubdue(flags) {
   return flags?.momentum?.allocations?.subdue === true;
 }
 
+export function getCommittedCalledShot(flags) {
+  const raw = flags?.momentum?.allocations?.calledShot ?? null;
+  return raw?.key ? raw : null;
+}
+
 function getBreakGuardCandidates(flags) {
   return (Array.isArray(flags?.targets) ? flags.targets : [])
     .filter((target) => target?.tokenUuid)
@@ -105,6 +182,97 @@ function getBreakGuardCandidates(flags) {
       tokenUuid: target.tokenUuid,
       name: target.name ?? "Target"
     }));
+}
+
+function buildMomentumDialogContent({
+  generated,
+  isPhysicalAttack,
+  showCalledShot,
+  showBreakGuard,
+  canAffordBreakGuard
+}) {
+  return `
+    <div class="c2mq-momentum-dialog-body">
+      <p class="c2mq-momentum-summary">
+        ${game.i18n.format("C2MQ.Dialog.Momentum.Content", { generated })}
+      </p>
+
+      <div class="c2mq-momentum-row">
+        <label class="c2mq-momentum-label" for="c2mq-momentum-bonusDamage">
+          ${game.i18n.localize("C2MQ.Dialog.Momentum.BonusDamage")}
+        </label>
+        <input
+          id="c2mq-momentum-bonusDamage"
+          class="c2mq-momentum-input"
+          type="number"
+          name="bonusDamage"
+          min="0"
+          max="${generated}"
+          step="1"
+          value="0">
+      </div>
+
+      ${isPhysicalAttack ? `
+      <div class="c2mq-momentum-row">
+        <label class="c2mq-momentum-label" for="c2mq-momentum-penetration">
+          ${game.i18n.localize("C2MQ.Dialog.Momentum.Penetration")}
+        </label>
+        <input
+          id="c2mq-momentum-penetration"
+          class="c2mq-momentum-input"
+          type="number"
+          name="penetration"
+          min="0"
+          max="${generated}"
+          step="1"
+          value="0">
+      </div>
+      ` : ""}
+
+      ${isPhysicalAttack ? `
+      <div class="c2mq-momentum-row">
+        <label class="c2mq-momentum-label" for="c2mq-momentum-subdue">
+          ${game.i18n.localize("C2MQ.Dialog.Momentum.Subdue")}
+        </label>
+        <input
+          id="c2mq-momentum-subdue"
+          class="c2mq-momentum-checkbox"
+          type="checkbox"
+          name="subdue">
+      </div>
+      ` : ""}
+
+      ${showCalledShot ? `
+      <div class="c2mq-momentum-row">
+        <label class="c2mq-momentum-label" for="c2mq-momentum-calledShot">
+          ${game.i18n.localize("C2MQ.Dialog.Momentum.CalledShot")}
+        </label>
+        <select
+          id="c2mq-momentum-calledShot"
+          class="c2mq-momentum-select"
+          name="calledShot">
+          ${buildCalledShotOptions()}
+        </select>
+      </div>
+      ` : ""}
+
+      ${showBreakGuard ? `
+      <div class="c2mq-momentum-row">
+        <label class="c2mq-momentum-label" for="c2mq-momentum-breakGuard">
+          ${game.i18n.localize("C2MQ.Dialog.Momentum.BreakGuard")}
+        </label>
+        <input
+          id="c2mq-momentum-breakGuard"
+          class="c2mq-momentum-checkbox"
+          type="checkbox"
+          name="breakGuard"
+          ${canAffordBreakGuard ? "" : "disabled"}>
+      </div>
+      ` : ""}
+
+      <p class="c2mq-momentum-preview" data-c2mq-preview="true"></p>
+    </div>
+  `;
 }
 
 export async function openMomentumSpendDialog(message) {
@@ -131,65 +299,56 @@ export async function openMomentumSpendDialog(message) {
   }
 
   const breakGuardCandidates = getBreakGuardCandidates(existingFlags);
+  const breakGuardTarget = breakGuardCandidates.length === 1 ? breakGuardCandidates[0] : null;
 
   const isPhysicalAttack = String(existingFlags?.damage?.type ?? "").trim().toLowerCase() === "physical";
+  const hitLocationEnabled = !!game.settings.get(MODULE_ID, SETTING_KEYS.HIT_LOCATION_ENABLED);
+  const showCalledShot = isPhysicalAttack && hitLocationEnabled && generated >= 2 && !hasAppliedDamage(existingFlags);
+  const showBreakGuard = isPhysicalAttack && !!breakGuardTarget;
+  const canAffordBreakGuard = generated >= 2;
 
   return await new Promise((resolve) => {
     let confirmed = false;
 
-    const content = `
-      <div class="dialog">
-        <div class="dialog-content">
-          <p>${game.i18n.format("C2MQ.Dialog.Momentum.Content", { generated })}</p>
+    const content = buildMomentumDialogContent({
+      generated,
+      isPhysicalAttack,
+      showCalledShot,
+      showBreakGuard,
+      canAffordBreakGuard
+    });
 
-          <div class="form-group">
-            <label>${game.i18n.localize("C2MQ.Dialog.Momentum.Penetration")}</label>
-            <input type="number" name="penetration" min="0" max="${generated}" step="1" value="0">
-          </div>
-
-          ${isPhysicalAttack ? `
-          <div class="form-group stacked">
-            <label class="checkbox">
-              <input type="checkbox" name="subdue">
-              ${game.i18n.localize("C2MQ.Dialog.Momentum.Subdue")}
-            </label>
-          </div>
-          ` : ""}
-
-          <div class="form-group">
-            <label>${game.i18n.localize("C2MQ.Dialog.Momentum.BreakGuard")}</label>
-            <input type="number" name="penetration" min="0" max="${generated}" step="1" value="0">
-          </div>
-
-          <div class="form-group">
-            <label>${game.i18n.localize("C2MQ.Dialog.Momentum.BreakGuard")}</label>
-            <select name="breakGuardTokenUuid">
-              <option value="">${game.i18n.localize("C2MQ.Dialog.Momentum.NoBreakGuard")}</option>
-              ${breakGuardCandidates.map((target) => `
-                <option value="${foundry.utils.escapeHTML(target.tokenUuid)}">
-                  ${foundry.utils.escapeHTML(target.name)}
-                </option>
-              `).join("")}
-            </select>
-          </div>
-
-          <p data-c2mq-preview="true"></p>
-        </div>
-      </div>
-    `;
-
-    let dlg = null;
-
-    const updatePreview = (root) => {
+    const readSpendForm = (root) => {
       const bonusInput = root.querySelector('input[name="bonusDamage"]');
       const penetrationInput = root.querySelector('input[name="penetration"]');
       const subdueInput = root.querySelector('input[name="subdue"]');
-      const guardSelect = root.querySelector('select[name="breakGuardTokenUuid"]');
-      const preview = root.querySelector('[data-c2mq-preview="true"]');
+      const calledShotSelect = root.querySelector('select[name="calledShot"]');
+      const breakGuardInput = root.querySelector('input[name="breakGuard"]');
 
-      const guardCost = guardSelect?.value ? 2 : 0;
-      const subdueCost = subdueInput?.checked ? 1 : 0;
-      const maxVariableSpend = Math.max(0, generated - guardCost - subdueCost);
+      let subdue = subdueInput?.checked === true;
+      let calledShotKey = String(calledShotSelect?.value ?? "");
+      let breakGuardActive = breakGuardInput?.checked === true;
+
+      // Fixed-cost spends are sanitized from right to left so the preview never
+      // advertises spending more Momentum than the roll generated.
+      let fixedCost = (subdue ? 1 : 0) + (calledShotKey ? 2 : 0) + (breakGuardActive ? 2 : 0);
+      if (fixedCost > generated && breakGuardActive) {
+        breakGuardActive = false;
+        fixedCost -= 2;
+        if (breakGuardInput) breakGuardInput.checked = false;
+      }
+      if (fixedCost > generated && calledShotKey) {
+        calledShotKey = "";
+        fixedCost -= 2;
+        if (calledShotSelect) calledShotSelect.value = "";
+      }
+      if (fixedCost > generated && subdue) {
+        subdue = false;
+        fixedCost -= 1;
+        if (subdueInput) subdueInput.checked = false;
+      }
+
+      const maxVariableSpend = Math.max(0, generated - fixedCost);
 
       let bonusDamage = toInt(bonusInput?.value, 0);
       if (bonusDamage > maxVariableSpend) {
@@ -204,18 +363,40 @@ export async function openMomentumSpendDialog(message) {
         if (penetrationInput) penetrationInput.value = String(maxPenetration);
       }
 
-      const spent = bonusDamage + penetration + subdueCost + guardCost;
+      const calledShot = getCalledShotLocation(calledShotKey);
+      const breakGuardCost = breakGuardActive ? 2 : 0;
+      const subdueCost = subdue ? 1 : 0;
+      const calledShotCost = calledShot ? 2 : 0;
+      const spent = bonusDamage + penetration + subdueCost + calledShotCost + breakGuardCost;
       const banked = Math.max(0, generated - spent);
+
+      return {
+        bonusDamage,
+        penetration,
+        subdue,
+        subdueCost,
+        calledShot,
+        calledShotCost,
+        breakGuardActive,
+        breakGuardCost,
+        spent,
+        banked
+      };
+    };
+
+    const updatePreview = (root) => {
+      const preview = root.querySelector('[data-c2mq-preview="true"]');
+      const spend = readSpendForm(root);
 
       if (preview) {
         preview.textContent = game.i18n.format("C2MQ.Dialog.Momentum.Preview", {
-          spent,
-          banked
+          spent: spend.spent,
+          banked: spend.banked
         });
       }
     };
 
-    dlg = new Dialog(
+    new Dialog(
       {
         title: game.i18n.localize("C2MQ.Dialog.Momentum.Title"),
         content,
@@ -224,27 +405,19 @@ export async function openMomentumSpendDialog(message) {
             label: game.i18n.localize("C2MQ.Dialog.Momentum.ButtonConfirm"),
             callback: async (html) => {
               const root = html?.[0] ?? html;
-              const bonusInput = root?.querySelector?.('input[name="bonusDamage"]');
-              const penetrationInput = root?.querySelector?.('input[name="penetration"]');
-              const subdueInput = root?.querySelector?.('input[name="subdue"]');
-              const guardSelect = root?.querySelector?.('select[name="breakGuardTokenUuid"]');
-
-              const breakGuardTokenUuid = String(guardSelect?.value ?? "");
-              const breakGuardCost = breakGuardTokenUuid ? 2 : 0;
-              const subdue = subdueInput?.checked === true;
-              const subdueCost = subdue ? 1 : 0;
-              const maxVariableSpend = Math.max(0, generated - breakGuardCost - subdueCost);
-              const bonusDamage = Math.min(maxVariableSpend, toInt(bonusInput?.value, 0));
-              const penetration = Math.min(
-                Math.max(0, maxVariableSpend - bonusDamage),
-                toInt(penetrationInput?.value, 0)
-              );
-              const spent = bonusDamage + penetration + subdueCost + breakGuardCost;
-              const banked = Math.max(0, generated - spent);
-
-              const breakGuardTarget = breakGuardCandidates.find((target) => {
-                return target.tokenUuid === breakGuardTokenUuid;
-              }) ?? null;
+              const spend = readSpendForm(root);
+              const {
+                bonusDamage,
+                penetration,
+                subdue,
+                subdueCost,
+                calledShot,
+                calledShotCost,
+                banked
+              } = spend;
+              const breakGuardActive = spend.breakGuardActive && !!breakGuardTarget;
+              const breakGuardCost = breakGuardActive ? 2 : 0;
+              const spent = bonusDamage + penetration + subdueCost + calledShotCost + breakGuardCost;
 
               const next = foundry.utils.duplicate(existingFlags);
               next.momentum = {
@@ -260,8 +433,13 @@ export async function openMomentumSpendDialog(message) {
                   bonusDamage,
                   penetration,
                   subdue,
+                  calledShot: calledShot ? {
+                    key: calledShot.key,
+                    label: calledShot.label,
+                    spent: 2
+                  } : null,
                   rerollDamage: null,
-                  breakGuard: breakGuardTarget ? {
+                  breakGuard: breakGuardActive ? {
                     tokenUuid: breakGuardTarget.tokenUuid,
                     targetName: breakGuardTarget.name,
                     spent: 2
@@ -269,16 +447,19 @@ export async function openMomentumSpendDialog(message) {
                 }
               };
 
+              if (calledShot) {
+                applyCalledShotToHitLocations(next, calledShot);
+              }
+
               // If damage was already rolled before committing the Momentum spend,
-              // update the stored damage snapshot so the card display and later
-              // Apply damage use the corrected total.
+              // update the stored snapshot so chat display and Apply use the
+              // corrected values.
               if (next.damage?.rolled === true) {
                 const prevMomentumSpent = Number(next.damage?.spends?.momentum ?? 0) || 0;
 
                 if (bonusDamage > 0) {
                   const prevTotal = Number(next.damage.total ?? 0) || 0;
                   const prevStatic = Number(next.damage.static ?? 0) || 0;
-
                   next.damage.total = prevTotal + bonusDamage;
                   next.damage.static = prevStatic + bonusDamage;
                 }
@@ -294,23 +475,19 @@ export async function openMomentumSpendDialog(message) {
 
                 next.damage.spends = {
                   ...(next.damage.spends ?? {}),
-                  momentum: prevMomentumSpent + bonusDamage + penetration + subdueCost
+                  momentum: prevMomentumSpent + bonusDamage + penetration + subdueCost + calledShotCost
                 };
               }
 
-              // Persist the message-scoped plan first so the roll cannot be reused.
               await message.update({ [`flags.${MODULE_ID}`]: next });
 
-              // Bank only the remainder from this roll.
               if (banked > 0) {
                 await adjustPoolValue(plan.bankType, banked);
               }
 
-              // Clear the actor-side temporary momentum produced by the native roll.
               await actor.update({ "system.momentum": 0 });
 
-              // Apply auto-resolvable spends immediately.
-              if (breakGuardTarget?.tokenUuid) {
+              if (breakGuardActive && breakGuardTarget?.tokenUuid) {
                 const freshMessage = game.messages?.get(message.id) ?? message;
                 await execBreakGuard(freshMessage, breakGuardTarget.tokenUuid);
               }
@@ -321,6 +498,7 @@ export async function openMomentumSpendDialog(message) {
               } catch (_e) {
                 // Ignore chat rerender failures.
               }
+
               resolve(true);
             }
           },
@@ -334,7 +512,8 @@ export async function openMomentumSpendDialog(message) {
           root?.querySelector?.('input[name="bonusDamage"]')?.addEventListener("input", () => updatePreview(root));
           root?.querySelector?.('input[name="penetration"]')?.addEventListener("input", () => updatePreview(root));
           root?.querySelector?.('input[name="subdue"]')?.addEventListener("change", () => updatePreview(root));
-          root?.querySelector?.('select[name="breakGuardTokenUuid"]')?.addEventListener("change", () => updatePreview(root));
+          root?.querySelector?.('select[name="calledShot"]')?.addEventListener("change", () => updatePreview(root));
+          root?.querySelector?.('input[name="breakGuard"]')?.addEventListener("change", () => updatePreview(root));
           updatePreview(root);
         },
         close: () => {
@@ -342,8 +521,6 @@ export async function openMomentumSpendDialog(message) {
         }
       },
       { classes: ["c2mq", "c2mq-momentum-dialog"] }
-    );
-
-    dlg.render(true);
+    ).render(true);
   });
 }

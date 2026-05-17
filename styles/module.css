@@ -392,3 +392,58 @@
 .c2mq-btn-break-guard {
   padding: 2px 3px;
 }
+
+.c2mq-momentum-dialog .c2mq-momentum-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-summary,
+.c2mq-momentum-dialog .c2mq-momentum-preview {
+  margin: 0;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-preview {
+  font-weight: 600;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-input {
+  flex: 0 0 84px;
+  width: 84px;
+  text-align: right;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-select {
+  flex: 0 0 160px;
+  max-width: 160px;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-checkbox {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.c2mq-momentum-dialog .dialog-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.c2mq-momentum-dialog .dialog-buttons .dialog-button {
+  flex: 1 1 0;
+  width: auto;
+  margin: 0;
+}

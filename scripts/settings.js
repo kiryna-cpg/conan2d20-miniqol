@@ -1,4 +1,4 @@
-import { MODULE_ID, SETTING_KEYS } from "./constants.js";
+import { MODULE_ID, SETTING_KEYS, HOOK_NAMES } from "./constants.js";
 
 export function registerSettings() {
   game.settings.register(MODULE_ID, SETTING_KEYS.AUTO_ROLL_DAMAGE, {
@@ -35,6 +35,26 @@ export function registerSettings() {
     config: true,
     type: Boolean,
     default: true
+  });
+
+  game.settings.register(MODULE_ID, SETTING_KEYS.REACH_STATUS_ENABLED, {
+    name: game.i18n.localize("C2MQ.Setting.ReachStatusEnabled.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.ReachStatusEnabled.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => Hooks.callAll(HOOK_NAMES.REACH_STATUS_SETTING_CHANGED)
+  });
+
+  game.settings.register(MODULE_ID, SETTING_KEYS.SHOW_REACH_1_STATUS, {
+    name: game.i18n.localize("C2MQ.Setting.ShowReach1Status.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.ShowReach1Status.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => Hooks.callAll(HOOK_NAMES.REACH_STATUS_SETTING_CHANGED)
   });
 
   game.settings.register(MODULE_ID, SETTING_KEYS.HIT_LOCATION_ENABLED, {

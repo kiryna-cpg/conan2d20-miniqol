@@ -3,6 +3,7 @@ import { registerSettings } from "./settings.js";
 import { registerSocket } from "./socket.js";
 import { registerChatHooks } from "./hooks/chat.js";
 import { registerReachHooks } from "./hooks/reach.js";
+import { registerReachStatusHooks } from "./hooks/reach-status.js";
 import { registerCombatStateHooks } from "./hooks/combat-state.js";
 import { registerSkillRollerBridge } from "./hooks/skill-roller-bridge.js";
 import { registerTargetTrackingHooks } from "./hooks/target-tracking.js";
@@ -144,8 +145,9 @@ Hooks.once("init", async () => {
   registerSettings();
   registerSocket();
 
-  if (typeof loadTemplates === "function") {
-    await loadTemplates(TEMPLATE_PATHS);
+  const loadTemplatesFn = foundry.applications?.handlebars?.loadTemplates ?? globalThis.loadTemplates;
+  if (typeof loadTemplatesFn === "function") {
+    await loadTemplatesFn(TEMPLATE_PATHS);
   }
 
   registerCombatStateHooks();
@@ -153,6 +155,7 @@ Hooks.once("init", async () => {
   registerSkillRollerBridge();
   registerChatHooks();
   registerReachHooks();
+  registerReachStatusHooks();
 });
 
 Hooks.once("setup", () => {

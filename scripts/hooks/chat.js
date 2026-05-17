@@ -42,8 +42,111 @@ let _hooksRegistered = false;
 let _delegatedBound = false;
 let _nativeMomentumInterceptBound = false;
 
+function renderHandlebarsTemplate(path, data) {
+  const renderer = foundry.applications?.handlebars?.renderTemplate ?? globalThis.renderTemplate;
+  return renderer(path, data);
+}
+
 function hasActiveGM() {
   return game.users?.some((user) => user.active && user.isGM);
+}
+
+function allowPlayerRequests() {
+  try {
+    return !!game.settings.get(MODULE_ID, SETTING_KEYS.ALLOW_PLAYERS_REQUEST_APPLY);
+  } catch (_e) {
+    return false;
+  }
+}
+
+function getMessageAuthorId(message) {
+  const raw =
+    message?.author?.id ??
+    message?.user?.id ??
+    message?.user ??
+    message?._source?.user ??
+    null;
+
+  return typeof raw === "object" ? raw?.id ?? null : raw;
+}
+
+function isMessageAuthoredByUser(message, user = game.user) {
+  if (!message || !user) return false;
+
+  if (user.id === game.user?.id && message.isAuthor === true) return true;
+
+  return getMessageAuthorId(message) === user.id;
+}
+
+function actorIdFromUuid(actorUuid) {
+  const parts = String(actorUuid ?? "").split(".");
+  return parts[0] === "Actor" ? parts[1] ?? null : null;
+}
+
+function getMessagePermissionActor(message) {
+  const actorId =
+    message?.speaker?.actor ??
+    actorIdFromUuid(message?.flags?.[MODULE_ID]?.context?.attackerActorUuid) ??
+    message?.flags?.data?.actor?._id ??
+    message?.flags?.data?.actor?.id ??
+    message?.flags?.data?.rollData?.actorId ??
+    null;
+
+  if (actorId && game.actors?.has?.(actorId)) return game.actors.get(actorId);
+
+  const tokenDoc = getMessagePermissionToken(message);
+  return tokenDoc?.actor ?? null;
+}
+
+function getMessagePermissionToken(message) {
+  const sceneId = message?.speaker?.scene ?? null;
+  const tokenId = message?.speaker?.token ?? null;
+  if (!sceneId || !tokenId) return null;
+
+  return game.scenes?.get(sceneId)?.tokens?.get(tokenId)
+    ?? (canvas?.scene?.id === sceneId ? canvas.scene?.tokens?.get(tokenId) ?? null : null)
+    ?? null;
+}
+
+function userOwnsDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.id === game.user?.id && document.isOwner === true) return true;
+
+  if (typeof document.testUserPermission === "function") {
+    try {
+      if (document.testUserPermission(user, "OWNER")) return true;
+    } catch (_e) {
+      // Continue with numeric and ownership fallbacks below.
+    }
+
+    try {
+      const ownerLevel = CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+      if (document.testUserPermission(user, ownerLevel)) return true;
+    } catch (_e) {
+      // Continue with ownership fallback below.
+    }
+  }
+
+  const ownerLevel = CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+  const ownership = document.ownership ?? document._source?.ownership ?? null;
+  const level = Number(ownership?.[user.id] ?? ownership?.default ?? 0);
+
+  return Number.isFinite(level) && level >= ownerLevel;
+}
+
+function canUserOperateAttackMessage(message, user = game.user) {
+  if (!message || !user) return false;
+  if (user.isGM) return true;
+  if (isMessageAuthoredByUser(message, user)) return true;
+
+  const actor = getMessagePermissionActor(message);
+  if (userOwnsDocument(user, actor)) return true;
+
+  const tokenDoc = getMessagePermissionToken(message);
+  if (userOwnsDocument(user, tokenDoc)) return true;
+  if (userOwnsDocument(user, tokenDoc?.actor)) return true;
+
+  return false;
 }
 
 function isSystemDoomSpendCardContent(content) {
@@ -97,7 +200,7 @@ function bindNativeMomentumInterceptOnce() {
     const message = game.messages?.get(messageId) ?? null;
     if (!message) return;
 
-    if (!(game.user?.isGM === true || message?.author?.id === game.user?.id)) return;
+    if (!canUserOperateAttackMessage(message)) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -597,7 +700,7 @@ function hasBreakGuardSpendApplied(flags, tokenUuid) {
 }
 
 function canUserOperateBreakGuard(message) {
-  return game.user?.isGM === true || message?.author?.id === game.user?.id;
+  return canUserOperateAttackMessage(message);
 }
 
 function makeMomentumSpendRow(key, { highlighted = false } = {}) {
@@ -618,12 +721,25 @@ function buildMomentumSpendView(message, flags, reaction, targetRows) {
 
   if (plan.committed) {
     const rows = [];
+    const bonusDamage = Number(plan.allocations?.bonusDamage ?? 0) || 0;
+    const penetration = Number(plan.allocations?.penetration ?? 0) || 0;
 
-    if ((Number(plan.allocations?.penetration ?? 0) || 0) > 0) {
+    if (bonusDamage > 0) {
       rows.push({
-        cost: String(plan.allocations.penetration),
+        cost: String(bonusDamage),
+        title: game.i18n.format("C2MQ.MomentumCommitted.BonusDamage", {
+          value: bonusDamage
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.BonusDamage.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (penetration > 0) {
+      rows.push({
+        cost: String(penetration),
         title: game.i18n.format("C2MQ.MomentumCommitted.Penetration", {
-          value: (Number(plan.allocations.penetration ?? 0) || 0) * 2
+          value: penetration * 2
         }),
         detail: game.i18n.localize("C2MQ.MomentumSpend.Penetration.Detail"),
         highlighted: true
@@ -639,13 +755,13 @@ function buildMomentumSpendView(message, flags, reaction, targetRows) {
       });
     }
 
-    if (plan.allocations?.rerollDamage?.used === true) {
+    if (plan.allocations?.calledShot?.key) {
       rows.push({
-        cost: String(plan.allocations.penetration),
-        title: game.i18n.format("C2MQ.MomentumCommitted.Penetration", {
-          value: (Number(plan.allocations.penetration ?? 0) || 0) * 2
+        cost: "2",
+        title: game.i18n.format("C2MQ.MomentumCommitted.CalledShot", {
+          location: plan.allocations.calledShot.label ?? plan.allocations.calledShot.key
         }),
-        detail: game.i18n.localize("C2MQ.MomentumSpend.Penetration.Detail"),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.CalledShot.Detail"),
         highlighted: true
       });
     }
@@ -736,7 +852,7 @@ async function injectMinQolBlock(message, root) {
   if (existingBlock) existingBlock.remove();
 
   if (!message.flags?.[MODULE_ID]) {
-    const canWrite = game.user?.isGM === true || message?.author?.id === game.user?.id;
+    const canWrite = canUserOperateAttackMessage(message);
     if (canWrite) await ensureMessageFlags(message);
   }
 
@@ -748,9 +864,10 @@ async function injectMinQolBlock(message, root) {
     damage: { rolled: false, total: null }
   };
 
+  const canOperateAttack = canUserOperateAttackMessage(liveMessage);
   const canApplyOperate =
     game.user?.isGM === true ||
-    (allowPlayerRequests() && liveMessage?.author?.id === game.user?.id);
+    (allowPlayerRequests() && canOperateAttack);
   const canUndoOperate = game.user?.isGM === true;
   const reaction = getReactionDisplayState(flags);
   const standaloneDamageCard = isStandaloneDamageCardMessage(liveMessage);
@@ -864,7 +981,7 @@ async function injectMinQolBlock(message, root) {
 
   const momentumPlan = getMomentumPlan(flags, liveMessage);
   const showRerollDamage =
-    (game.user?.isGM === true || liveMessage?.author?.id === game.user?.id) &&
+    canOperateAttack &&
     flags.damage?.rolled === true &&
     Array.isArray(flags.damage?.faces) &&
     flags.damage.faces.length > 0 &&
@@ -877,7 +994,7 @@ async function injectMinQolBlock(message, root) {
   const data = {
     messageId: liveMessage.id,
     canRollDamage:
-      (game.user?.isGM === true || liveMessage?.author?.id === game.user?.id) &&
+      canOperateAttack &&
       !reaction.blocksDamage &&
       !reaction.outcomeMiss,
     damage: flags.damage ?? { rolled: false },
@@ -896,7 +1013,7 @@ async function injectMinQolBlock(message, root) {
   };
 
   const templatePath = `modules/${MODULE_ID}/templates/chat/miniqol-controls.hbs`;
-  const blockHtml = await renderTemplate(templatePath, data);
+  const blockHtml = await renderHandlebarsTemplate(templatePath, data);
 
   const contentEl = root.querySelector(".message-content") ?? root;
   contentEl.insertAdjacentHTML("beforeend", blockHtml);
@@ -922,9 +1039,10 @@ function bindDelegatedClicksOnce() {
     const action = button.dataset.action;
     const targetTokenUuid = button.dataset.targetUuid ?? null;
 
+    const canOperateAttack = canUserOperateAttackMessage(message);
     const useSocket = hasActiveGM() ? !game.user.isGM : false;
     const useSocketForRoll = hasActiveGM()
-      ? !(game.user?.isGM === true || message?.author?.id === game.user?.id)
+      ? !(game.user?.isGM === true || isMessageAuthoredByUser(message))
       : false;
 
     if (action === "defend") {
@@ -970,7 +1088,7 @@ function bindDelegatedClicksOnce() {
         return;
       }
 
-      const canWrite = game.user?.isGM === true || message?.author?.id === game.user?.id;
+      const canWrite = canOperateAttack;
       if (!message.flags?.[MODULE_ID] && canWrite) await ensureMessageFlags(message);
 
       const fresh = game.messages?.get(messageId) ?? message;
@@ -984,7 +1102,7 @@ function bindDelegatedClicksOnce() {
 
       if (useSocketForRoll) return requestRollDamage(messageId);
 
-      const canWrite = game.user?.isGM === true || message?.author?.id === game.user?.id;
+      const canWrite = canOperateAttack;
       if (!message.flags?.[MODULE_ID] && canWrite) await ensureMessageFlags(message);
 
       const fresh = game.messages?.get(messageId) ?? message;
@@ -1000,7 +1118,7 @@ function bindDelegatedClicksOnce() {
 
     const canApplyOperate =
       game.user?.isGM === true ||
-      (allowPlayerRequests() && message?.author?.id === game.user?.id);
+      (allowPlayerRequests() && canOperateAttack);
 
     if (action === "apply") {
       if (!canApplyOperate) return;
@@ -1080,9 +1198,7 @@ function bindDelegatedClicksOnce() {
     }
 
     if (action === "break-guard") {
-      const canBreakGuardOperate =
-        game.user?.isGM === true ||
-        message?.author?.id === game.user?.id;
+      const canBreakGuardOperate = canUserOperateBreakGuard(message);
 
       if (!canBreakGuardOperate) return;
 
@@ -1129,7 +1245,7 @@ export function registerChatHooks() {
     }
   });
 
-  Hooks.on("renderChatMessage", async (message, html) => {
+  Hooks.on("renderChatMessageHTML", async (message, html) => {
     try {
       const root = getRootEl(html);
       if (!root) return;
@@ -1137,7 +1253,7 @@ export function registerChatHooks() {
       injectReactionNavigationBlock(message, root);
       keepLatestMessageInView(message.id);
     } catch (e) {
-      console.error(`[${MODULE_ID}] renderChatMessage error`, e);
+      console.error(`[${MODULE_ID}] renderChatMessageHTML error`, e);
     }
   });
 

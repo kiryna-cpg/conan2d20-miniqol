@@ -87,6 +87,8 @@ export const SETTING_KEYS = {
   AUTO_ROLL_DAMAGE: "autoRollDamage",
   AUTO_APPLY_DAMAGE: "autoApplyDamage",
   AUTO_REACH_DIFFICULTY: "autoReachDifficulty",
+  REACH_STATUS_ENABLED: "reachStatusEnabled",
+  SHOW_REACH_1_STATUS: "showReach1Status",
   PROMPT_BREAK_GUARD: "promptBreakGuard",
   HIT_LOCATION_ENABLED: "hitLocationEnabled",
   SACRIFICIAL_ARMOR_ENABLED: "sacrificialArmorEnabled",
@@ -98,7 +100,19 @@ export const SETTING_KEYS = {
 };
 export const HOOK_NAMES = {
   SKILL_ROLLER_CONTEXT: `${MODULE_ID}:skillRollerContext`,
-  RESOLVE_WITHIN_REACH: `${MODULE_ID}:resolveWithinReach`
+  RESOLVE_WITHIN_REACH: `${MODULE_ID}:resolveWithinReach`,
+  REACH_STATUS_SETTING_CHANGED: `${MODULE_ID}:reachStatusSettingChanged`
+};
+
+export const LEGACY_REACH_STATUS_MODULE_ID = "conan2d20-reach-status";
+
+export const REACH_STATUS = {
+  MAX_REACH: 3,
+  NO_REACH_ID: "conan-no-reach",
+  REACH_IDS: Array.from({ length: 3 }, (_, i) => `conan-reach-${i + 1}`),
+  ALL_STATUS_IDS: ["conan-no-reach", ...Array.from({ length: 3 }, (_, i) => `conan-reach-${i + 1}`)],
+  FLAG_MANUAL_STATUS: "manualStatusId",
+  FLAG_MANUAL_MARKER: "manualSetViaHud"
 };
 
 export const ROLL_INTENT_TTL_MS = 15000;

@@ -62,6 +62,89 @@ function getRequesterUser(payload) {
   return requesterUserId ? game.users?.get(requesterUserId) ?? null : null;
 }
 
+function getMessageAuthorId(message) {
+  const raw =
+    message?.author?.id ??
+    message?.user?.id ??
+    message?.user ??
+    message?._source?.user ??
+    null;
+
+  return typeof raw === "object" ? raw?.id ?? null : raw;
+}
+
+function actorIdFromUuid(actorUuid) {
+  const parts = String(actorUuid ?? "").split(".");
+  return parts[0] === "Actor" ? parts[1] ?? null : null;
+}
+
+function getMessagePermissionActor(message) {
+  const actorId =
+    message?.speaker?.actor ??
+    actorIdFromUuid(message?.flags?.[MODULE_ID]?.context?.attackerActorUuid) ??
+    message?.flags?.data?.actor?._id ??
+    message?.flags?.data?.actor?.id ??
+    message?.flags?.data?.rollData?.actorId ??
+    null;
+
+  if (actorId && game.actors?.has?.(actorId)) return game.actors.get(actorId);
+
+  const tokenDoc = getMessagePermissionToken(message);
+  return tokenDoc?.actor ?? null;
+}
+
+function getMessagePermissionToken(message) {
+  const sceneId = message?.speaker?.scene ?? null;
+  const tokenId = message?.speaker?.token ?? null;
+  if (!sceneId || !tokenId) return null;
+
+  return game.scenes?.get(sceneId)?.tokens?.get(tokenId)
+    ?? (canvas?.scene?.id === sceneId ? canvas.scene?.tokens?.get(tokenId) ?? null : null)
+    ?? null;
+}
+
+function userOwnsDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.id === game.user?.id && document.isOwner === true) return true;
+
+  if (typeof document.testUserPermission === "function") {
+    try {
+      if (document.testUserPermission(user, "OWNER")) return true;
+    } catch (_e) {
+      // Continue with numeric and ownership fallbacks below.
+    }
+
+    try {
+      const ownerLevel = CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+      if (document.testUserPermission(user, ownerLevel)) return true;
+    } catch (_e) {
+      // Continue with ownership fallback below.
+    }
+  }
+
+  const ownerLevel = CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+  const ownership = document.ownership ?? document._source?.ownership ?? null;
+  const level = Number(ownership?.[user.id] ?? ownership?.default ?? 0);
+
+  return Number.isFinite(level) && level >= ownerLevel;
+}
+
+function canRequesterOperateAttackMessage(message, payload) {
+  const requester = getRequesterUser(payload);
+  if (!requester) return false;
+  if (requester.isGM) return true;
+  if (getMessageAuthorId(message) === requester.id) return true;
+
+  const actor = getMessagePermissionActor(message);
+  if (userOwnsDocument(requester, actor)) return true;
+
+  const tokenDoc = getMessagePermissionToken(message);
+  if (userOwnsDocument(requester, tokenDoc)) return true;
+  if (userOwnsDocument(requester, tokenDoc?.actor)) return true;
+
+  return false;
+}
+
 function canRequesterApplyMessage(message, payload) {
   const requester = getRequesterUser(payload);
   if (!requester) return false;
@@ -69,16 +152,11 @@ function canRequesterApplyMessage(message, payload) {
   if (requester.isGM) return true;
   if (!game.settings.get(MODULE_ID, SETTING_KEYS.ALLOW_PLAYERS_REQUEST_APPLY)) return false;
 
-  // Current workflow source-of-truth: players may request Apply only for their own chat messages.
-  return message?.author?.id === requester.id;
+  return canRequesterOperateAttackMessage(message, payload);
 }
 
 function canRequesterBreakGuardMessage(message, payload) {
-  const requester = getRequesterUser(payload);
-  if (!requester) return false;
-  if (requester.isGM) return true;
-
-  return message?.author?.id === requester.id;
+  return canRequesterOperateAttackMessage(message, payload);
 }
 
 function safeTokenKey(tokenUuid) {
@@ -179,14 +257,14 @@ async function withCombatant(payload, callback) {
 
 const SOCKET_HANDLERS = {
   [SOCKET_OPS.ROLL_DAMAGE]: async (payload) =>
-    withMessage(payload, (message) => execRollDamage(message)),
+    withMessage(payload, (message) => {
+      if (!canRequesterOperateAttackMessage(message, payload)) return;
+      return execRollDamage(message);
+    }),
 
   [SOCKET_OPS.REROLL_DAMAGE]: async (payload) =>
     withMessage(payload, (message) => {
-      const requester = getRequesterUser(payload);
-      if (!requester) return;
-      if (!(requester.isGM || message?.author?.id === requester.id)) return;
-
+      if (!canRequesterOperateAttackMessage(message, payload)) return;
       return execRerollDamage(message, payload.selectedIndices);
     }),
 
@@ -304,7 +382,10 @@ function emitSocket(op, payload = {}) {
 }
 
 export function requestRollDamage(messageId) {
-  emitSocket(SOCKET_OPS.ROLL_DAMAGE, { messageId });
+  emitSocket(SOCKET_OPS.ROLL_DAMAGE, {
+    messageId,
+    requesterUserId: game.user?.id ?? null
+  });
 }
 
 export function requestRerollDamage(messageId, selectedIndices) {

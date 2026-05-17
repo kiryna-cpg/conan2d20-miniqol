@@ -1,5 +1,5 @@
 import { MODULE_ID, SETTING_KEYS, SOCKET_NAME, SOCKET_OPS } from "../constants.js";
-import { getCommittedBonusDamage, getCommittedPenetration, getCommittedSubdue } from "./momentum-workflow.js";
+import { getCommittedBonusDamage, getCommittedCalledShot, getCommittedPenetration, getCommittedSubdue } from "./momentum-workflow.js";
 import { adjustPoolValue } from "../adapter/pool-tracker.js";
 import {
   debugEnabled,
@@ -16,16 +16,32 @@ function hasActiveGM() {
   return game.users?.some((u) => u.active && u.isGM);
 }
 
+function getMessageAuthorId(message) {
+  const raw =
+    message?.author?.id ??
+    message?.user?.id ??
+    message?.user ??
+    message?._source?.user ??
+    null;
+
+  return typeof raw === "object" ? raw?.id ?? null : raw;
+}
+
+function isMessageAuthoredByCurrentUser(message) {
+  if (!message) return false;
+  if (message.isAuthor === true) return true;
+  return getMessageAuthorId(message) === game.user?.id;
+}
+
 function isAuthoritativeForDamageRoll(message) {
   if (game.user?.isGM) return true;
-  if (message?.author?.id === game.user?.id) return true;
-  return false;
+  return isMessageAuthoredByCurrentUser(message);
 }
 
 function isAuthoritativeForApplyWorkflow(message) {
   if (game.user?.isGM) return true;
   if (hasActiveGM()) return false;
-  return message?.author?.id === game.user?.id;
+  return isMessageAuthoredByCurrentUser(message);
 }
 
 async function openDamageRollerDialog({ itemName, baseDice, defaultAttackType, committedMomentumBonus = 0 }) {
@@ -278,6 +294,18 @@ function normalizeDamageType(rawType) {
 function safeTokenKey(tokenUuid) {
   const raw = String(tokenUuid ?? "");
   return encodeURIComponent(raw).replaceAll(".", "%2E");
+}
+
+function normalizeCalledShotHit(calledShot) {
+  if (!calledShot?.key) return null;
+
+  const labelKey = CONFIG.CONAN?.coverageTypes?.[calledShot.key] ?? calledShot.key;
+  return {
+    d20: null,
+    key: calledShot.key,
+    label: calledShot.label ?? game.i18n.localize(labelKey),
+    source: "calledShot"
+  };
 }
 
 function parseSceneTokenFromUuid(tokenUuid) {
@@ -921,6 +949,7 @@ export async function execRollDamage(message) {
   const committedMomentumBonus = getCommittedBonusDamage(flags);
   const committedPenetration = getCommittedPenetration(flags);
   const committedSubdue = getCommittedSubdue(flags);
+  const committedCalledShot = normalizeCalledShotHit(getCommittedCalledShot(flags));
 
   const params = await openDamageRollerDialog({
     itemName,
@@ -944,7 +973,9 @@ export async function execRollDamage(message) {
   for (const t of flags.targets ?? []) {
     const key = safeTokenKey(t.tokenUuid);
 
-    if (hitLocationEnabled) {
+    if (hitLocationEnabled && committedCalledShot) {
+      byTarget[key] = foundry.utils.duplicate(committedCalledShot);
+    } else if (hitLocationEnabled) {
       const d20 = await new Roll("1d20").evaluate();
       const face = Number(d20.total ?? d20.result ?? 0);
       const hl = hitLocationFromD20(face);
@@ -982,7 +1013,12 @@ export async function execRollDamage(message) {
       doom: Number(params.spendDoom ?? 0) || 0
     }
   };
-  next.hitLocation = { enabled: hitLocationEnabled, mode: "perTarget", byTarget };
+  next.hitLocation = {
+    enabled: hitLocationEnabled,
+    mode: "perTarget",
+    seed: hitLocationEnabled && committedCalledShot ? foundry.utils.duplicate(committedCalledShot) : null,
+    byTarget
+  };
 
   await setFlags(message, next);
   try { ui.chat?.render?.(true); } catch (_e) {}
@@ -996,11 +1032,12 @@ async function confirmApplyAfterSuccessfulDefense(flags) {
   const outcome = String(reaction.outcome ?? "").trim().toLowerCase();
   const defenseSuccesses = Math.max(0, Number(reaction.defenseSuccesses ?? 0) || 0);
 
-  // Only prompt when a Defend roll was successful on its own terms
-  // (it generated successes) but the struggle still resolved as a hit.
+  // In this workflow, a Defend roll is only actually successful if it
+  // changes the attack outcome to a miss. Some successes that do not beat
+  // the attack are still a failed defense and must not trigger this prompt.
   if (kind !== "defend") return true;
   if (phase !== "resolved") return true;
-  if (outcome !== "hit") return true;
+  if (outcome !== "miss") return true;
   if (defenseSuccesses <= 0) return true;
 
   return await Dialog.confirm({
@@ -1048,6 +1085,7 @@ export async function execRerollDamage(message, selectedIndices = null) {
   const currentStatic = Number(next.damage?.static ?? 0) || 0;
   const currentMomentumSpent = Number(next.damage?.spends?.momentum ?? 0) || 0;
   const penetration = getCommittedPenetration(next);
+  const subdue = getCommittedSubdue(next) === true || next.damage?.nonlethal === true;
 
   next.damage = {
     ...next.damage,
@@ -1056,7 +1094,7 @@ export async function execRerollDamage(message, selectedIndices = null) {
     total: summary.total + currentStatic,
     ignoreSoak: qualityMeta.ignoreSoak + (penetration * 2),
     intense: qualityMeta.intense,
-    nonlethal: qualityMeta.nonlethal,
+    nonlethal: qualityMeta.nonlethal || subdue,
     qualityBonusDamage: qualityMeta.bonusDamage,
     spends: {
       ...(next.damage?.spends ?? {}),

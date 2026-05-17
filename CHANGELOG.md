@@ -12,6 +12,45 @@ This project follows a lightweight versioning style.
 
 ---
 
+## [13.3.10] - 2026-05-17
+### Added
+- Added a real **Called Shot** Momentum spend for physical attacks when Hit Location support is enabled.
+- Called Shot costs 2 Momentum, lets the user choose the hit location, stores the allocation on the attack message, and applies that location to Roll Damage / Apply Damage.
+
+### Changed
+- Momentum committed summaries now show Bonus Damage and Called Shot explicitly.
+- Damage re-rolls preserve Called Shot locations instead of replacing them with random hit locations.
+
+### Fixed
+- Removed the duplicated committed Momentum summary row that could show Penetration in place of Re-roll Damage.
+
+---
+
+## [13.3.9] - 2026-05-16
+### Fixed
+- Players who own the attacking actor/token can now see and use attack-card damage controls even when the chat message author is not that player.
+- Socket-side validation for Roll Damage, Re-roll Damage, Apply, Apply All, Set Targets, and Break Guard now accepts actor/token ownership instead of relying only on chat message authorship.
+- Failed Defense rolls that generated successes but did not beat the attack no longer trigger the “apply damage anyway” confirmation dialog.
+
+---
+
+## [13.3.8] - 2026-05-16
+### Added
+- Integrated the standalone **Conan 2d20 - Reach Status** module into Mini QoL for the Foundry v13 line.
+- Added automatic token status icons for **Reach 1**, **Reach 2**, **Reach 3**, and **No Reach** under Mini QoL ownership.
+- Added Mini QoL settings for enabling Reach Status sync and for controlling automatic **Reach 1** display.
+- Added compatibility reading for legacy `conan2d20-reach-status` flags and migrated the legacy `showReach1` setting when present.
+
+### Changed
+- Mini QoL is now the owner of Reach Status automation for the v13 line alongside existing Reach/Guard assistance.
+- Updated release metadata and manifest versioning for **13.3.8**.
+
+### Fixed
+- Avoided duplicate Reach automation when the old standalone Reach Status module remains active.
+- Hardened Reach Status sync around stale or transient token actors.
+
+---
+
 ## [0.2.20] - Final 0.2.x release
 ### Added
 - Inline **Defend** flow on attack cards, using Conan’s native defensive roll workflow.

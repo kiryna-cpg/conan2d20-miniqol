@@ -26,6 +26,48 @@ function normalizeDamageType(rawType) {
   return String(rawType ?? "").trim().toLowerCase() === "mental" ? "mental" : "physical";
 }
 
+function getMessageActor(message) {
+  const data = message?.flags?.data ?? {};
+  const actorId =
+    data?.actor?._id ??
+    data?.actor?.id ??
+    data?.rollData?.actorId ??
+    message?.speaker?.actor ??
+    null;
+
+  if (actorId && game.actors?.has?.(actorId)) return game.actors.get(actorId);
+
+  const sceneId = message?.speaker?.scene ?? null;
+  const tokenId = message?.speaker?.token ?? null;
+  if (!sceneId || !tokenId) return null;
+
+  const scene = game.scenes?.get(sceneId) ?? null;
+  const tokenDoc = scene?.tokens?.get(tokenId)
+    ?? (canvas?.scene?.id === sceneId ? canvas.scene?.tokens?.get(tokenId) ?? null : null)
+    ?? null;
+
+  return tokenDoc?.actor ?? null;
+}
+
+function getMessageItemData(message) {
+  const data = message?.flags?.data ?? {};
+  const flagItem = data?.item ?? data?.rollData?.item ?? null;
+  if (flagItem?.system) return flagItem;
+
+  const itemId =
+    flagItem?._id ??
+    flagItem?.id ??
+    data?.rollData?.itemId ??
+    data?.rollData?.item?._id ??
+    data?.rollData?.item?.id ??
+    null;
+
+  if (!itemId) return flagItem ?? null;
+
+  const actor = getMessageActor(message);
+  return actor?.items?.get?.(itemId) ?? flagItem ?? null;
+}
+
 export function isStandaloneDamageCardMessage(message) {
   const data = message?.flags?.data ?? {};
   if (String(data?.type ?? "").trim().toLowerCase() !== "damage") return false;
@@ -46,7 +88,8 @@ export function isStandaloneDamageCardMessage(message) {
 export function isDamageCapableRoll(message) {
   if (isStandaloneDamageCardMessage(message)) return true;
 
-  const dice = Number(message?.flags?.data?.item?.system?.damage?.dice ?? 0);
+  const item = getMessageItemData(message);
+  const dice = Number(item?.system?.damage?.dice ?? 0);
   return Number.isFinite(dice) && dice > 0;
 }
 
@@ -58,8 +101,19 @@ export function collectCurrentTargets() {
   return collectCurrentUserTargets();
 }
 
+function getMessageAuthorId(message) {
+  const raw =
+    message?.author?.id ??
+    message?.user?.id ??
+    message?.user ??
+    message?._source?.user ??
+    null;
+
+  return typeof raw === "object" ? raw?.id ?? null : raw;
+}
+
 function getMessageAuthorUser(message) {
-  const authorId = message?.author?.id ?? message?.user ?? null;
+  const authorId = getMessageAuthorId(message);
   return authorId ? game.users?.get(authorId) ?? null : null;
 }
 
@@ -264,7 +318,7 @@ export function getRollSuccessCount(message) {
 export function classifyAttackType(message) {
   if (!isDamageCapableRoll(message)) return null;
 
-  const item = message?.flags?.data?.item ?? {};
+  const item = getMessageItemData(message) ?? {};
   const weaponType = String(item?.system?.weaponType ?? "").trim().toLowerCase();
   const damageType = String(item?.system?.damage?.type ?? "").trim().toLowerCase();
   const itemName = String(item?.name ?? "").trim().toLowerCase();
@@ -287,15 +341,23 @@ export function isAttackMessage(message) {
 
 export function buildMessageFlagsPayload(message, { targets = null } = {}) {
   const data = message?.flags?.data ?? {};
-  const actorId = data?.actor?._id ?? data?.rollData?.actorId ?? null;
+  const actor = getMessageActor(message);
+  const actorId = actor?.id ?? data?.actor?._id ?? data?.actor?.id ?? data?.rollData?.actorId ?? null;
   const actorUuid = actorId ? `Actor.${actorId}` : null;
-  const actor = actorId ? game.actors?.get(actorId) ?? null : null;
 
   const sceneId = message?.speaker?.scene ?? null;
   const tokenId = message?.speaker?.token ?? null;
   const attackerTokenUuid = tokenId && sceneId ? `Scene.${sceneId}.Token.${tokenId}` : null;
 
-  const itemId = data?.rollData?.item?._id ?? data?.item?._id ?? null;
+  const item = getMessageItemData(message);
+  const itemId =
+    item?._id ??
+    item?.id ??
+    data?.rollData?.item?._id ??
+    data?.rollData?.item?.id ??
+    data?.item?._id ??
+    data?.item?.id ??
+    null;
   const itemUuid = actorUuid && itemId ? `${actorUuid}.Item.${itemId}` : null;
 
   const resolvedTargets = resolveTargetsForMessage(message, targets);
@@ -308,8 +370,8 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
       attackerTokenUuid,
       itemUuid,
       itemId,
-      itemName: data?.item?.name ?? null,
-      authorUserId: message?.author?.id ?? null
+      itemName: item?.name ?? data?.item?.name ?? data?.rollData?.item?.name ?? null,
+      authorUserId: getMessageAuthorId(message)
     },
     targets: resolvedTargets,
     damage: standaloneDamageCard
@@ -321,7 +383,7 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
           static: 0,
           effects: 0,
           faces: [],
-          type: String(data?.item?.system?.damage?.type ?? "physical")
+          type: String(item?.system?.damage?.type ?? data?.item?.system?.damage?.type ?? "physical")
         },
     hitLocation: standaloneDamageCard
       ? buildDamageCardHitLocationPayload(message, resolvedTargets)
@@ -367,6 +429,7 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
         bonusDamage: 0,
         penetration: 0,
         subdue: false,
+        calledShot: null,
         rerollDamage: null,
         breakGuard: null
       }
