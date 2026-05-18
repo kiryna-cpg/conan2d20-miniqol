@@ -14,12 +14,7 @@ This project follows a lightweight versioning style.
 ## [13.3.17] - 2026-05-18
 ### Added
 - Added optional homebrew **Encumbrance as Fatigue** automation. Carried Encumbrance is tracked as module-managed Fatigue and reduces maximum Vigor automatically when relevant inventory data changes.
-- Added the **Incapacitated** status effect using `icons/incapacitated.webp`. Actors at Vigor 0 automatically gain it and recover from it when Vigor rises above 0.
-- Added EN/ES settings and warnings for Encumbrance as Fatigue and Incapacitated enforcement.
-
-### Changed
-- Skill rolls opened through the native Conan Skill Roller are blocked for Incapacitated actors.
-- Non-GM token movement is blocked while the token actor is Incapacitated.
+- Added EN/ES setting text for Encumbrance as Fatigue.
 
 ---
 
@@ -51,7 +46,7 @@ This project follows a lightweight versioning style.
 ### Changed
 - Disarm can now target equipped melee/ranged NPC attacks as well as character weapons, marking NPC attacks as unequipped through MiniQoL flags.
 - Reach Status now ignores NPC attacks marked as unequipped by MiniQoL.
-- Added the homebrew **Encumbrance as Fatigue / Incapacitated** rule to the planned milestone list.
+- Added the homebrew **Encumbrance as Fatigue** rule to the planned milestone list.
 
 ### Fixed
 - Disarm no longer offers Unarmed or Improvised weapons as valid targets.

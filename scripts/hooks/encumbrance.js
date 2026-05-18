@@ -1,21 +1,14 @@
 import { MODULE_ID, SETTING_KEYS, HOOK_NAMES } from "../constants.js";
 import { debugEnabled } from "../adapter/conan2d20.js";
 
-const INCAPACITATED_STATUS_ID = "conan-incapacitated";
+const LEGACY_VIGOR_ZERO_STATUS_ID = "conan-incapacitated";
 const ENCUMBRANCE_FATIGUE_FLAG = "encumbranceFatigue";
 const SYNC_DEBOUNCE_MS = 100;
 
 let _hooksRegistered = false;
-let _skillRollerPatched = false;
-let _actorSkillCheckPatched = false;
 let _vigorClampPatched = false;
-let _enforcingStatus = false;
 
 const _debouncers = new Map();
-
-function localize(key, data = null) {
-  return data ? game.i18n.format(key, data) : game.i18n.localize(key);
-}
 
 function isEncumbranceFatigueEnabled() {
   try {
@@ -90,94 +83,36 @@ function effectHasStatus(effect, statusId) {
   return setHasStatus(statuses, statusId);
 }
 
-function actorHasStatus(actor, statusId = INCAPACITATED_STATUS_ID) {
-  return actor?.effects?.some((effect) => !effect.disabled && effectHasStatus(effect, statusId)) === true;
-}
-
-function buildConanConditionFlagUpdate(doc = null) {
-  return {
-    "flags.conan2d20.trigger": doc?.flags?.conan2d20?.trigger ?? "endRound",
-    "flags.conan2d20.value": doc?.flags?.conan2d20?.value ?? null
-  };
-}
-
-function buildIncapacitatedStatusEffect() {
-  return {
-    id: INCAPACITATED_STATUS_ID,
-    name: "C2MQ.Status.Incapacitated",
-    label: "C2MQ.Status.Incapacitated",
-    tooltip: "C2MQ.Status.IncapacitatedTooltip",
-    img: `modules/${MODULE_ID}/icons/incapacitated.webp`,
-    hud: true,
-    statuses: [INCAPACITATED_STATUS_ID],
-    flags: {
-      conan2d20: {
-        trigger: "endRound",
-        value: null
+function removeLegacyVigorZeroStatusFromConfig() {
+  for (const collection of [CONFIG.statusEffects, CONFIG.CONAN?.statusEffects].filter(Array.isArray)) {
+    for (let i = collection.length - 1; i >= 0; i -= 1) {
+      const effect = collection[i];
+      if (effect?.id === LEGACY_VIGOR_ZERO_STATUS_ID || setHasStatus(effect?.statuses, LEGACY_VIGOR_ZERO_STATUS_ID)) {
+        collection.splice(i, 1);
       }
     }
-  };
-}
-
-function normalizeStatusEffect(effect, template) {
-  if (!effect) return template;
-
-  effect.name ??= template.name;
-  effect.label ??= template.label;
-  effect.tooltip ??= template.tooltip;
-  effect.img ??= template.img;
-  effect.hud = template.hud;
-
-  const statuses = effect.statuses instanceof Set
-    ? Array.from(effect.statuses)
-    : Array.isArray(effect.statuses)
-      ? [...effect.statuses]
-      : [];
-
-  if (!statuses.includes(template.id)) statuses.push(template.id);
-  effect.statuses = statuses;
-
-  effect.flags ??= {};
-  effect.flags.conan2d20 ??= {};
-  effect.flags.conan2d20.trigger ??= "endRound";
-  if (effect.flags.conan2d20.value === undefined) effect.flags.conan2d20.value = null;
-
-  return effect;
-}
-
-function registerStatusEffect() {
-  const targets = [CONFIG.statusEffects, CONFIG.CONAN?.statusEffects].filter(Array.isArray);
-  if (!targets.length) return;
-
-  const template = buildIncapacitatedStatusEffect();
-
-  for (const collection of targets) {
-    const existing = collection.find((effect) => effect?.id === INCAPACITATED_STATUS_ID);
-    if (existing) normalizeStatusEffect(existing, template);
-    else collection.push(foundry.utils.duplicate(template));
   }
 }
 
-async function normalizeIncapacitatedActiveEffect(effect, { context = "normalizeActiveEffect" } = {}) {
-  if (!effect || !effectHasStatus(effect, INCAPACITATED_STATUS_ID)) return false;
-  if (effect?.flags?.conan2d20?.value !== undefined) return false;
+async function removeLegacyVigorZeroEffects(actor, { reason = "legacyCleanup" } = {}) {
+  if (!actor || !isActorWritable(actor) || !isAuthoritativeForActor(actor)) return;
+
+  const effectIds = (Array.from(actor.effects ?? []))
+    .filter((effect) => effectHasStatus(effect, LEGACY_VIGOR_ZERO_STATUS_ID))
+    .map((effect) => effect.id)
+    .filter(Boolean);
+
+  if (!effectIds.length) return;
 
   try {
-    await effect.update(buildConanConditionFlagUpdate(effect));
-    return true;
+    await actor.deleteEmbeddedDocuments("ActiveEffect", effectIds);
   } catch (error) {
-    const actor = effect.parent?.documentName === "Actor" ? effect.parent : null;
-    logError(context, actor, error);
-    return false;
+    logError(reason, actor, error);
   }
 }
 
 function actorSupportsEncumbranceFatigue(actor) {
   return actor?.documentName === "Actor" && actor.type === "character" && !!actor.system?.health?.physical;
-}
-
-function actorSupportsIncapacitated(actor) {
-  return actor?.documentName === "Actor" && !!actor.system?.health?.physical;
 }
 
 function isItemEquipped(item) {
@@ -293,45 +228,14 @@ function calculateDesiredEncumbranceFatigueUpdate(actor) {
   return Object.keys(updateData).length ? updateData : null;
 }
 
-function shouldBeIncapacitated(actor) {
-  if (!actorSupportsIncapacitated(actor)) return false;
-
-  const physical = getPhysicalHealth(actor);
-  const current = toNumber(physical.value, 0);
-  const max = toNumber(physical.max, typeof actor.getMaxVigor === "function" ? actor.getMaxVigor() : current);
-
-  return current <= 0 || max <= 0;
-}
-
-async function syncIncapacitatedStatus(actor) {
-  if (!actorSupportsIncapacitated(actor)) return;
-  if (!isActorWritable(actor) || !isAuthoritativeForActor(actor)) return;
-
-  for (const effect of actor.effects ?? []) {
-    await normalizeIncapacitatedActiveEffect(effect, { context: "syncIncapacitatedStatus" });
-  }
-
-  const active = shouldBeIncapacitated(actor);
-  if (actorHasStatus(actor) === active) return;
-
-  _enforcingStatus = true;
-  try {
-    await actor.toggleStatusEffect(INCAPACITATED_STATUS_ID, { active });
-  } catch (error) {
-    logError("toggleStatusEffect", actor, error);
-  } finally {
-    _enforcingStatus = false;
-  }
-}
-
 async function syncActor(actor, { reason = "syncActor" } = {}) {
   if (!actor || !isActorWritable(actor) || !isAuthoritativeForActor(actor)) return;
 
   try {
+    await removeLegacyVigorZeroEffects(actor, { reason: `${reason}:legacyCleanup` });
+
     const encumbranceUpdate = calculateDesiredEncumbranceFatigueUpdate(actor);
     if (encumbranceUpdate) await actor.update(encumbranceUpdate);
-
-    await syncIncapacitatedStatus(actor);
 
     if (debugEnabled()) {
       console.debug(`[${MODULE_ID}] encumbrance sync`, {
@@ -416,61 +320,6 @@ function itemUpdateAffectsEncumbrance(changes = {}) {
   );
 }
 
-function notifyIncapacitated(actor, key) {
-  ui.notifications?.warn(localize(key, { name: actor?.name ?? "" }));
-}
-
-function patchSkillRollerRoll() {
-  const proto = globalThis.conan?.apps?.SkillRoller?.prototype ?? null;
-  if (!proto?._rollSkillCheck || _skillRollerPatched || proto.__c2mqIncapacitatedRollPatched === true) return false;
-
-  const originalRollSkillCheck = proto._rollSkillCheck;
-  proto._rollSkillCheck = async function c2mqIncapacitatedRollGuard(...args) {
-    if (actorHasStatus(this.actor) || shouldBeIncapacitated(this.actor)) {
-      notifyIncapacitated(this.actor, "C2MQ.Warn.IncapacitatedNoSkillCheck");
-      this.close?.();
-      return;
-    }
-
-    return originalRollSkillCheck.apply(this, args);
-  };
-
-  Object.defineProperty(proto, "__c2mqIncapacitatedRollPatched", {
-    value: true,
-    configurable: false,
-    enumerable: false,
-    writable: false
-  });
-
-  _skillRollerPatched = true;
-  return true;
-}
-
-function patchActorSkillCheckOpen() {
-  const proto = CONFIG.Actor?.documentClass?.prototype ?? game.actors?.documentClass?.prototype ?? null;
-  if (!proto?._rollSkillCheck || _actorSkillCheckPatched || proto.__c2mqIncapacitatedActorSkillPatched === true) return false;
-
-  const originalRollSkillCheck = proto._rollSkillCheck;
-  proto._rollSkillCheck = async function c2mqIncapacitatedActorSkillGuard(...args) {
-    if (actorHasStatus(this) || shouldBeIncapacitated(this)) {
-      notifyIncapacitated(this, "C2MQ.Warn.IncapacitatedNoSkillCheck");
-      return;
-    }
-
-    return originalRollSkillCheck.apply(this, args);
-  };
-
-  Object.defineProperty(proto, "__c2mqIncapacitatedActorSkillPatched", {
-    value: true,
-    configurable: false,
-    enumerable: false,
-    writable: false
-  });
-
-  _actorSkillCheckPatched = true;
-  return true;
-}
-
 function patchCharacterVigorClamp() {
   const proto = CONFIG.Actor?.documentClass?.prototype ?? game.actors?.documentClass?.prototype ?? null;
   if (!proto || _vigorClampPatched || proto.__c2mqVigorClampPatched === true) return false;
@@ -507,54 +356,18 @@ function patchCharacterVigorClamp() {
   return true;
 }
 
-function markSkillRollerIncapacitated(root, actor) {
-  if (!root || !actor) return;
-  if (!actorHasStatus(actor) && !shouldBeIncapacitated(actor)) return;
-  if (root.dataset.c2mqIncapacitatedMarked === "1") return;
-
-  root.dataset.c2mqIncapacitatedMarked = "1";
-
-  const warning = document.createElement("p");
-  warning.className = "c2mq-incapacitated-warning";
-  warning.textContent = localize("C2MQ.Warn.IncapacitatedNoSkillCheck", { name: actor.name });
-
-  const form = root.querySelector("form") ?? root;
-  form.prepend(warning);
-
-  for (const button of root.querySelectorAll(".roll-skill-check")) {
-    button.setAttribute("disabled", "disabled");
-    button.classList.add("disabled");
-  }
-}
-
-function getHtmlRoot(html) {
-  if (html instanceof HTMLElement) return html;
-  if (html?.querySelector) return html;
-  if (html?.[0] instanceof HTMLElement) return html[0];
-  if (html?.element?.[0] instanceof HTMLElement) return html.element[0];
-  return null;
-}
-
-function inferSkillRollerActor(app, data) {
-  const actorId = data?.rollData?.actorId ?? data?.actorId ?? app?.actor?.id ?? app?.object?.actor?.id ?? null;
-  if (actorId) return game.actors?.get(actorId) ?? app?.actor ?? app?.object?.actor ?? null;
-  return app?.actor ?? app?.object?.actor ?? null;
-}
-
 export function registerEncumbranceHooks() {
   if (_hooksRegistered) return;
   _hooksRegistered = true;
 
-  registerStatusEffect();
+  removeLegacyVigorZeroStatusFromConfig();
 
   Hooks.once("setup", () => {
-    registerStatusEffect();
+    removeLegacyVigorZeroStatusFromConfig();
   });
 
   Hooks.once("ready", () => {
-    registerStatusEffect();
-    patchSkillRollerRoll();
-    patchActorSkillCheckOpen();
+    removeLegacyVigorZeroStatusFromConfig();
     patchCharacterVigorClamp();
     scheduleAllActors({ immediate: true, reason: "ready" });
   });
@@ -564,6 +377,7 @@ export function registerEncumbranceHooks() {
   });
 
   Hooks.on("canvasReady", () => {
+    removeLegacyVigorZeroStatusFromConfig();
     scheduleAllActors({ reason: "canvasReady" });
   });
 
@@ -572,8 +386,6 @@ export function registerEncumbranceHooks() {
   });
 
   Hooks.on("updateActor", (actor, changes) => {
-    if (_enforcingStatus) return;
-
     if (
       changes?.system?.health?.physical !== undefined ||
       changes?.system?.attributes?.bra !== undefined ||
@@ -596,54 +408,5 @@ export function registerEncumbranceHooks() {
 
   Hooks.on("deleteItem", (item) => {
     if (isEncumbranceRelevantItem(item)) scheduleActorSync(item.parent, { reason: "deleteItem" });
-  });
-
-  Hooks.on("preCreateActiveEffect", (effect, data) => {
-    const hasIncapacitated = effectHasStatus(data, INCAPACITATED_STATUS_ID) || effectHasStatus(effect, INCAPACITATED_STATUS_ID);
-    if (!hasIncapacitated) return;
-
-    effect.updateSource?.(buildConanConditionFlagUpdate(effect));
-  });
-
-  Hooks.on("createActiveEffect", async (effect) => {
-    if (_enforcingStatus) return;
-
-    const actor = effect.parent;
-    if (!actor || actor.documentName !== "Actor") return;
-    if (!effectHasStatus(effect, INCAPACITATED_STATUS_ID)) return;
-
-    await normalizeIncapacitatedActiveEffect(effect, { context: "createActiveEffect" });
-  });
-
-  Hooks.on("deleteActiveEffect", (effect) => {
-    if (_enforcingStatus) return;
-
-    const actor = effect.parent;
-    if (!actor || actor.documentName !== "Actor") return;
-    if (!effectHasStatus(effect, INCAPACITATED_STATUS_ID)) return;
-
-    scheduleActorSync(actor, { reason: "deleteActiveEffect" });
-  });
-
-  Hooks.on("renderSkillRoller", (app, html, data) => {
-    try {
-      const root = getHtmlRoot(html);
-      const actor = inferSkillRollerActor(app, data);
-      markSkillRollerIncapacitated(root, actor);
-    } catch (error) {
-      console.error(`[${MODULE_ID}] renderSkillRoller incapacitated guard error`, error);
-    }
-  });
-
-  Hooks.on("preUpdateToken", (tokenDoc, changes) => {
-    if (game.user?.isGM) return;
-    if (changes?.x === undefined && changes?.y === undefined) return;
-
-    const actor = tokenDoc?.actor ?? null;
-    if (!actor) return;
-    if (!actorHasStatus(actor) && !shouldBeIncapacitated(actor)) return;
-
-    notifyIncapacitated(actor, "C2MQ.Warn.IncapacitatedCannotMove");
-    return false;
   });
 }

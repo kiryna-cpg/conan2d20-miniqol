@@ -140,9 +140,7 @@
     "Status": {
       "Pending": "Damage Pending",
       "Applied": "Damage Applied",
-      "NoGuard": "Guard Broken",
-      "Incapacitated": "Incapacitated",
-      "IncapacitatedTooltip": "Vigor 0: cannot move or make skill checks."
+      "NoGuard": "Guard Broken"
     },
     "Warn": {
       "DamageSpecMissing": "Damage data not found on this item yet (v0.1).",
@@ -159,9 +157,7 @@
       "ChangeStanceFailed": "MiniQoL could not apply the Prone status change.",
       "SecondWindFailed": "MiniQoL could not apply Second Wind recovery.",
       "DisarmTargetMissing": "MiniQoL could not find the disarm target or weapon.",
-      "DisarmFailed": "MiniQoL could not disarm the selected weapon.",
-      "IncapacitatedNoSkillCheck": "{name} is Incapacitated and cannot make skill checks.",
-      "IncapacitatedCannotMove": "{name} is Incapacitated and cannot move."
+      "DisarmFailed": "MiniQoL could not disarm the selected weapon."
     },
     "Chat": {
       "ReactionUnavailableTitle": "Reaction Unavailable",

@@ -140,9 +140,7 @@
     "Status": {
       "Pending": "Daño Pendiente",
       "Applied": "Daño Aplicado",
-      "NoGuard": "Guardia Rota",
-      "Incapacitated": "Incapacitado",
-      "IncapacitatedTooltip": "Vigor 0: no puede moverse ni hacer tiradas de habilidad."
+      "NoGuard": "Guardia Rota"
     },
     "Warn": {
       "DamageSpecMissing": "No se han encontrado aún datos de daño en este objeto (v0.1).",
@@ -159,9 +157,7 @@
       "ChangeStanceFailed": "MiniQoL no ha podido aplicar el cambio de estado Tumbado.",
       "SecondWindFailed": "MiniQoL no ha podido aplicar la recuperación de Segundo aliento.",
       "DisarmTargetMissing": "MiniQoL no ha podido encontrar el objetivo o el arma que desarmar.",
-      "DisarmFailed": "MiniQoL no ha podido desarmar el arma seleccionada.",
-      "IncapacitatedNoSkillCheck": "{name} está Incapacitado y no puede hacer tiradas de habilidad.",
-      "IncapacitatedCannotMove": "{name} está Incapacitado y no puede moverse."
+      "DisarmFailed": "MiniQoL no ha podido desarmar el arma seleccionada."
     },
     "Chat": {
       "ReactionUnavailableTitle": "Reacción no disponible",
