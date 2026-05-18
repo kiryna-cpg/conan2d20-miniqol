@@ -178,9 +178,15 @@
         <div class="c2mq-target" data-target-uuid="{{this.tokenUuid}}">
           <div class="c2mq-target-main">
             <div class="c2mq-target-topline">
-              <div class="c2mq-target-titleline">
-                <span class="c2mq-target-name">{{this.name}}</span>
-                <span class="c2mq-muted c2mq-damage-state {{this.statusClass}}">{{this.statusLabel}}</span>
+              <div class="c2mq-target-titleblock">
+                <div class="c2mq-target-titleline">
+                  <span class="c2mq-target-name">{{this.name}}</span>
+                  <span class="c2mq-muted c2mq-damage-state {{this.statusClass}}">{{this.statusLabel}}</span>
+                </div>
+
+                {{#if this.armorSoakLabel}}
+                  <div class="c2mq-target-subline c2mq-muted">{{this.armorSoakLabel}}</div>
+                {{/if}}
               </div>
 
               <div class="c2mq-target-actions">

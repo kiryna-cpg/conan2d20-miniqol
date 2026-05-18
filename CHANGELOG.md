@@ -6,9 +6,86 @@ This project follows a lightweight versioning style.
 
 ## [Unreleased]
 ### Planned
-- Combat Momentum spend interception / resolution.
 - Broader metacurrency-aware combat helpers.
 - Optional future integration points for external engagement / zones tooling.
+
+---
+
+## [13.3.17] - 2026-05-18
+### Added
+- Added optional homebrew **Encumbrance as Fatigue** automation. Carried Encumbrance is tracked as module-managed Fatigue and reduces maximum Vigor automatically when relevant inventory data changes.
+- Added the **Incapacitated** status effect using `icons/incapacitated.webp`. Actors at Vigor 0 automatically gain it and recover from it when Vigor rises above 0.
+- Added EN/ES settings and warnings for Encumbrance as Fatigue and Incapacitated enforcement.
+
+### Changed
+- Skill rolls opened through the native Conan Skill Roller are blocked for Incapacitated actors.
+- Non-GM token movement is blocked while the token actor is Incapacitated.
+
+---
+
+## [13.3.16] - 2026-05-18
+### Added
+- Attack-card target rows now show each target's current Armor/Soak below its name.
+- NPCs use their flat Armor value; characters show a per-location Armor/Soak spread until a hit location is known, then show the relevant location value.
+- Mental damage cards show Morale Soak instead of physical Armor/Soak.
+
+---
+
+## [13.3.15] - 2026-05-17
+### Added
+- Added optional homebrew **Critical Damage** support.
+- When enabled, a successful physical melee/ranged attack with a rolled natural 1 marks the attack as **Critical Damage** and adds one automatic Wound when damage is applied.
+- Added an EN/ES module setting to enable or disable Critical Damage.
+
+### Changed
+- Critical Damage now replaces the native successful attack outcome with a gold **Success with Critical Damage** result.
+- Damage presentation now includes a Critical Damage tag only in the damage details/tags area once damage has been rolled.
+- Fortune dice and assist dice do not trigger Critical Damage, keeping the rule tied to the attacking actor's rolled natural 1s.
+
+---
+
+## [13.3.14] - 2026-05-17
+### Added
+- Added MiniQoL-owned equipment state for NPC attacks, with a Conan NPC sheet context-menu action to unequip melee/ranged NPC attacks and an inline “unequipped” button to mark them equipped again.
+
+### Changed
+- Disarm can now target equipped melee/ranged NPC attacks as well as character weapons, marking NPC attacks as unequipped through MiniQoL flags.
+- Reach Status now ignores NPC attacks marked as unequipped by MiniQoL.
+- Added the homebrew **Encumbrance as Fatigue / Incapacitated** rule to the planned milestone list.
+
+### Fixed
+- Disarm no longer offers Unarmed or Improvised weapons as valid targets.
+
+---
+
+## [13.3.13] - 2026-05-17
+### Added
+- Added a real **Disarm** Momentum spend to the Spend/Bank Momentum dialog.
+- Disarm lists equipped target weapons, costs 2 Momentum for one-handed weapons and 3 Momentum for other weapon sizes, and unequips the selected weapon through the GM socket when needed.
+
+### Changed
+- Momentum committed summaries now show the selected Disarm target and weapon and subtract that spend from the amount banked to Momentum/Doom.
+- Added the homebrew **Critical Damage** rule to the planned milestone list.
+
+---
+
+## [13.3.12] - 2026-05-17
+### Added
+- Added a real **Second Wind** Momentum spend to the Spend/Bank Momentum dialog.
+- Second Wind can recover Vigor or Resolve by 1 point per Momentum spent, capped by the actor's current maximum.
+
+### Changed
+- Momentum committed summaries now show Second Wind recovery and subtract that spend from the amount banked to Momentum/Doom.
+
+---
+
+## [13.3.11] - 2026-05-17
+### Added
+- Added a real **Change Stance** Momentum spend to the Spend/Bank Momentum dialog.
+- Change Stance costs 1 Momentum and toggles the acting actor between standing and Prone using the Conan system status effect.
+
+### Changed
+- Momentum committed summaries now show Change Stance when it was selected and applied.
 
 ---
 

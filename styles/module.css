@@ -156,6 +156,13 @@
   color: #b71c1c;
 }
 
+.chat-message .message-content h2.success-or-failure.success.c2mq-critical-damage-outcome,
+.chat-message .message-content h3.success-or-failure.success.c2mq-critical-damage-outcome,
+.chat-message .message-content h4.success-or-failure.success.c2mq-critical-damage-outcome {
+  color: #9f7a16;
+  text-transform: none;
+}
+
 .c2mq-target-list {
   display: flex;
   flex-direction: column;
@@ -192,6 +199,13 @@
   min-width: 0;
 }
 
+.c2mq-target-titleblock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .c2mq-target-titleline {
   display: flex;
   align-items: center;
@@ -211,6 +225,15 @@
   white-space: nowrap;
   flex: 0 0 auto;
 }
+
+.c2mq-target-subline {
+  font-size: 0.85em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
 .c2mq-damage-state.applied {
   font-weight: 600;
@@ -446,4 +469,49 @@
   flex: 1 1 0;
   width: auto;
   margin: 0;
+}
+.c2mq-momentum-dialog .c2mq-momentum-second-wind-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-second-wind-select {
+  flex-basis: 170px;
+  max-width: 170px;
+}
+
+.c2mq-momentum-dialog .c2mq-momentum-disarm-select {
+  flex-basis: 220px;
+  max-width: 220px;
+}
+
+.c2mq-npcattack-unequipped .item-name h4 {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+
+.c2mq-npcattack-equip-toggle {
+  position: relative;
+  color: grey;
+}
+
+.c2mq-npcattack-equip-toggle::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 50%;
+  border-top: 2px solid red;
+  transform: rotate(-35deg);
+}
+
+.c2mq-incapacitated-warning {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(120, 0, 0, 0.45);
+  border-radius: 4px;
+  font-weight: 600;
 }

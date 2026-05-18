@@ -1047,6 +1047,15 @@ async function confirmApplyAfterSuccessfulDefense(flags) {
   });
 }
 
+function getCriticalDamageExtraWounds(flags, { damageType = "physical", nonlethal = false } = {}) {
+  if (flags?.criticalDamage?.active !== true) return 0;
+  if (String(damageType ?? "physical").trim().toLowerCase() !== "physical") return 0;
+  if (nonlethal === true) return 0;
+
+  const extra = Number(flags?.criticalDamage?.extraWounds ?? 0);
+  return Number.isFinite(extra) ? Math.max(0, Math.trunc(extra)) : 0;
+}
+
 export async function execRerollDamage(message, selectedIndices = null) {
   if (!message) return;
 
@@ -1191,7 +1200,10 @@ async function _applyToSingle(message, tokenUuid) {
     if (intense && harms > 0) harms += 1;
   }
 
-    const sacrificialEnabled = !!game.settings.get(MODULE_ID, SETTING_KEYS.SACRIFICIAL_ARMOR_ENABLED);
+  const criticalDamageExtraWounds = getCriticalDamageExtraWounds(flags, { damageType, nonlethal });
+  if (criticalDamageExtraWounds > 0) harms += criticalDamageExtraWounds;
+
+  const sacrificialEnabled = !!game.settings.get(MODULE_ID, SETTING_KEYS.SACRIFICIAL_ARMOR_ENABLED);
   const allowWeaponSacrifice = !!game.settings.get(MODULE_ID, SETTING_KEYS.SACRIFICIAL_WEAPONS_ENABLED);
   const sacUsage = getSacrificialUsageContext(actor, tokenDoc);
   const sacFlagPath = `flags.${MODULE_ID}.sacrificial`;
@@ -1275,6 +1287,7 @@ async function _applyToSingle(message, tokenUuid) {
       soakUsed: soak,
       netDamage,
       harmsApplied: harms,
+      criticalDamageExtraWounds,
       stressBefore: beforeStress,
       stressAfter: afterStress,
       hitLocationKey

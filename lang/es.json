@@ -18,7 +18,11 @@
       "MomentumSpends": "Gastos de Momentum",
       "NumberOfDice": "Número de dados",
       "Effects": "Effects",
-      "MomentumCommittedSummary": "gastado {spent}, reservado {banked}"
+      "MomentumCommittedSummary": "gastado {spent}, reservado {banked}",
+      "TargetArmorSoak": "Armadura: {value}",
+      "TargetArmorSoakAtLocation": "Armadura ({location}): {value}",
+      "TargetArmorSoakSpread": "Armadurak: {values}",
+      "TargetMoraleSoak": "Valentía: {value}"
     },
     "Button": {
       "RollDamage": "Tirar daño",
@@ -37,13 +41,16 @@
       "GoToDefenseRoll": "Ir a la tirada de Defensa",
       "GoToAttackRoll": "Ir a la tirada de ataque",
       "ReRollDamage": "Repetir daño",
-      "Decline": "Rechazar"
+      "Decline": "Rechazar",
+      "NpcAttackUnequip": "Desequipar ataque",
+      "NpcAttackEquip": "Equipar ataque"
     },
     "Tag": {
       "Piercing": "Penetrante {value}",
       "BonusDamage": "Daño extra +{value}",
       "Intense": "Intenso",
-      "Nonlethal": "No letal"
+      "Nonlethal": "No letal",
+      "CriticalDamage": "Daño crítico (+{value} Herida)"
     },
     "DamageType": {
       "Physical": "Físico",
@@ -56,7 +63,12 @@
       "Banked": "Reservado en {pool}",
       "BankedDetail": "Esta es la parte del Momentum generado que se ha enviado a la reserva tras confirmar el plan de gasto.",
       "BonusDamage": "Daño adicional: +{value}",
-      "CalledShot": "Ataque localizado: {location}"
+      "CalledShot": "Ataque localizado: {location}",
+      "ChangeStance": "Cambiar postura: {stance}",
+      "ChangeStanceProne": "tumbado",
+      "ChangeStanceStanding": "de pie",
+      "SecondWind": "Segundo aliento: {capability} +{value}",
+      "Disarm": "Desarmar: {item} de {target}"
     },
     "MomentumSpend": {
       "BonusDamage": {
@@ -128,7 +140,9 @@
     "Status": {
       "Pending": "Daño Pendiente",
       "Applied": "Daño Aplicado",
-      "NoGuard": "Guardia Rota"
+      "NoGuard": "Guardia Rota",
+      "Incapacitated": "Incapacitado",
+      "IncapacitatedTooltip": "Vigor 0: no puede moverse ni hacer tiradas de habilidad."
     },
     "Warn": {
       "DamageSpecMissing": "No se han encontrado aún datos de daño en este objeto (v0.1).",
@@ -141,7 +155,13 @@
       "NoSacrificialCandidates": "No se ha encontrado armadura/escudo/arma equipado, intacto y sacrificable.",
       "MomentumActorMissing": "MiniQoL no ha podido resolver el actor para este gasto de Momentum.",
       "MomentumAlreadyCommitted": "El Momentum de esta tirada ya ha sido gastado o enviado a la reserva.",
-      "LegacyReachStatusActive": "El módulo independiente Conan 2d20 - Reach Status está activo. La sincronización de Reach Status de MiniQoL se desactiva para evitar hooks duplicados."
+      "LegacyReachStatusActive": "El módulo independiente Conan 2d20 - Reach Status está activo. La sincronización de Reach Status de MiniQoL se desactiva para evitar hooks duplicados.",
+      "ChangeStanceFailed": "MiniQoL no ha podido aplicar el cambio de estado Tumbado.",
+      "SecondWindFailed": "MiniQoL no ha podido aplicar la recuperación de Segundo aliento.",
+      "DisarmTargetMissing": "MiniQoL no ha podido encontrar el objetivo o el arma que desarmar.",
+      "DisarmFailed": "MiniQoL no ha podido desarmar el arma seleccionada.",
+      "IncapacitatedNoSkillCheck": "{name} está Incapacitado y no puede hacer tiradas de habilidad.",
+      "IncapacitatedCannotMove": "{name} está Incapacitado y no puede moverse."
     },
     "Chat": {
       "ReactionUnavailableTitle": "Reacción no disponible",
@@ -249,7 +269,14 @@
         "Preview": "Gastas {spent}, reservas {banked}.",
         "ButtonConfirm": "Confirmar",
         "CalledShot": "Ataque localizado (elige localización, 2 Momentum)",
-        "NoCalledShot": "Sin ataque localizado"
+        "NoCalledShot": "Sin ataque localizado",
+        "ChangeStance": "Cambiar postura ({stance}, 1 Momentum)",
+        "ChangeStanceGoProne": "tumbarse",
+        "ChangeStanceStandUp": "levantarse",
+        "SecondWind": "Segundo aliento (recuperar Estrés)",
+        "SecondWindCapabilityState": "{capability} ({current}/{max})",
+        "Disarm": "Desarmar arma (2–3 Momentum)",
+        "NoDisarm": "No gastar en Desarmar"
       }
     },
     "Reach": {
@@ -313,6 +340,14 @@
       "ShowReach1Status": {
         "Name": "Mostrar icono de Reach 1",
         "Hint": "Si se desactiva, Reach 1 no se aplicará automáticamente. Reach 2-3 y Sin Reach seguirán disponibles."
+      },
+      "CriticalDamage": {
+        "Name": "Activar norma homebrew de Daño crítico",
+        "Hint": "Si está activada, una tirada de ataque físico exitosa con un 1 natural añade una Herida automática al daño. Los dados de Fortuna y de asistencia no activan esta regla."
+      },
+      "EncumbranceFatigue": {
+        "Name": "Carga como Fatiga",
+        "Hint": "Cuando está activado, la Carga transportada se añade automáticamente como Fatiga y reduce el Vigor máximo. Desactívalo para conservar sólo la Fatiga controlada manualmente."
       }
     },
     "ReachStatus": {
@@ -328,6 +363,9 @@
         "Reach3": "Estado automático de Reach 3.",
         "NoReach": "Anulación manual que suprime el Reach automático."
       }
+    },
+    "CriticalDamage": {
+      "AttackLabel": "Éxito con daño crítico"
     }
   }
 }

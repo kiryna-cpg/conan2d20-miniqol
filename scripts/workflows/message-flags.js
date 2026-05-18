@@ -97,6 +97,46 @@ export function isSuccessfulRoll(message) {
   return message?.flags?.data?.results?.result === "success";
 }
 
+function getCriticalDamageSettingEnabled() {
+  try {
+    return !!game.settings.get(MODULE_ID, SETTING_KEYS.CRITICAL_DAMAGE_ENABLED);
+  } catch (_e) {
+    return false;
+  }
+}
+
+function countNaturalOnesForCriticalDamage(message) {
+  const rolls = message?.flags?.data?.results?.rolls;
+  if (!Array.isArray(rolls)) return 0;
+
+  return rolls.filter((roll) => {
+    // Fortune dice are purchased automatic 1s, not rolled natural 1s.
+    if (roll?.fortuneSpend === true) return false;
+    // Assist dice belong to the assisting actor and should not trigger the attacker's homebrew damage rider.
+    if (roll?.assist === true) return false;
+    return Number(roll?.result ?? 0) === 1;
+  }).length;
+}
+
+function buildCriticalDamagePayload(message, item, attackType) {
+  const enabled = getCriticalDamageSettingEnabled();
+  const naturalOnes = countNaturalOnesForCriticalDamage(message);
+  const damageType = normalizeDamageType(item?.system?.damage?.type ?? message?.flags?.data?.item?.system?.damage?.type ?? "physical");
+  const active = enabled
+    && isSuccessfulRoll(message)
+    && naturalOnes > 0
+    && damageType === "physical"
+    && (attackType === ATTACK_TYPES.MELEE || attackType === ATTACK_TYPES.RANGED);
+
+  return {
+    schema: 1,
+    enabled,
+    active,
+    naturalOnes,
+    extraWounds: active ? 1 : 0
+  };
+}
+
 export function collectCurrentTargets() {
   return collectCurrentUserTargets();
 }
@@ -362,6 +402,7 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
 
   const resolvedTargets = resolveTargetsForMessage(message, targets);
   const standaloneDamageCard = isStandaloneDamageCardMessage(message);
+  const attackType = classifyAttackType(message);
 
   return {
     schema: 1,
@@ -396,7 +437,7 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
     reaction: {
       kind: null,
       phase: REACTION_PHASES.NONE,
-      attackType: classifyAttackType(message),
+      attackType,
       blockedDamage: false,
       outcome: null,
       reactionId: null,
@@ -416,6 +457,15 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
       costApplied: false,
       resolvedByMessageId: null
     },
+    criticalDamage: standaloneDamageCard
+      ? {
+          schema: 1,
+          enabled: getCriticalDamageSettingEnabled(),
+          active: false,
+          naturalOnes: 0,
+          extraWounds: 0
+        }
+      : buildCriticalDamagePayload(message, item, attackType),
     momentum: {
       schema: 1,
       committed: false,
@@ -430,8 +480,11 @@ export function buildMessageFlagsPayload(message, { targets = null } = {}) {
         penetration: 0,
         subdue: false,
         calledShot: null,
+        changeStance: null,
+        secondWind: null,
         rerollDamage: null,
-        breakGuard: null
+        breakGuard: null,
+        disarm: null
       }
     },
     applied: {}

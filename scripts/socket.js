@@ -14,6 +14,7 @@ import {
   resolveSacrificialItemPrompt
 } from "./workflows/damage-workflow.js";
 import { execBreakGuard } from "./workflows/guard-workflow.js";
+import { execDisarm } from "./workflows/disarm-workflow.js";
 import { ensureMessageFlags } from "./workflows/message-flags.js";
 import {
   patchCombatState,
@@ -159,6 +160,10 @@ function canRequesterBreakGuardMessage(message, payload) {
   return canRequesterOperateAttackMessage(message, payload);
 }
 
+function canRequesterDisarmMessage(message, payload) {
+  return canRequesterOperateAttackMessage(message, payload);
+}
+
 function safeTokenKey(tokenUuid) {
   const raw = String(tokenUuid ?? "");
   return encodeURIComponent(raw).replaceAll(".", "%2E");
@@ -239,7 +244,8 @@ async function withMessage(payload, callback) {
       SOCKET_OPS.UNDO,
       SOCKET_OPS.APPLY_ALL,
       SOCKET_OPS.SET_TARGETS,
-      SOCKET_OPS.REMOVE_TARGET
+      SOCKET_OPS.REMOVE_TARGET,
+      SOCKET_OPS.DISARM
     ].includes(payload.op)
   ) {
     await ensureMessageFlags(message);
@@ -327,6 +333,12 @@ const SOCKET_HANDLERS = {
     withMessage(payload, (message) => {
       if (!canRequesterBreakGuardMessage(message, payload)) return;
       return execBreakGuard(message, payload.targetTokenUuid);
+    }),
+
+  [SOCKET_OPS.DISARM]: async (payload) =>
+    withMessage(payload, (message) => {
+      if (!canRequesterDisarmMessage(message, payload)) return;
+      return execDisarm(message, payload.allocation ?? {});
     }),
 
   [SOCKET_OPS.UPSERT_COMBAT_STATE]: async (payload) =>
@@ -439,6 +451,14 @@ export function requestBreakGuard(messageId, targetTokenUuid) {
   emitSocket(SOCKET_OPS.BREAK_GUARD, {
     messageId,
     targetTokenUuid,
+    requesterUserId: game.user?.id ?? null
+  });
+}
+
+export function requestDisarm(messageId, allocation) {
+  emitSocket(SOCKET_OPS.DISARM, {
+    messageId,
+    allocation: foundry.utils.duplicate(allocation ?? {}),
     requesterUserId: game.user?.id ?? null
   });
 }

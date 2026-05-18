@@ -6,6 +6,7 @@ import {
   REACH_STATUS
 } from "../constants.js";
 import { readItemReach, debugEnabled } from "../adapter/conan2d20.js";
+import { isNpcAttackUnequipped } from "../utils/npc-attack-equipment.js";
 
 const {
   MAX_REACH,
@@ -359,7 +360,10 @@ function getPcReach(actor) {
 
 function getNpcReach(actor) {
   const allowedTypes = new Set(["npcattack", "weapon"]);
-  const candidates = Array.from(actor?.items ?? []).filter((item) => allowedTypes.has(item.type));
+  const candidates = Array.from(actor?.items ?? []).filter((item) => {
+    if (!allowedTypes.has(item.type)) return false;
+    return item.type !== "npcattack" || !isNpcAttackUnequipped(item);
+  });
   const reaches = candidates
     .map(readItemReach)
     .filter((reach) => Number.isFinite(reach) && reach > 0);

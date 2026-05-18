@@ -16,6 +16,7 @@ export const SOCKET_OPS = {
   SET_TARGETS: "SET_TARGETS",
   REMOVE_TARGET: "REMOVE_TARGET",
   BREAK_GUARD: "BREAK_GUARD",
+  DISARM: "DISARM",
   UPSERT_COMBAT_STATE: "UPSERT_COMBAT_STATE",
   CLEAR_COMBAT_STATE: "CLEAR_COMBAT_STATE",
   PROMPT_REACTION: "PROMPT_REACTION",
@@ -96,12 +97,15 @@ export const SETTING_KEYS = {
   ALLOW_PLAYERS_REQUEST_APPLY: "allowPlayersRequestApply",
   SHOW_APPLY_ALL: "showApplyAll",
   DEBUG: "debug",
-  SACRIFICIAL_WEAPONS_ENABLED: "sacrificialWeaponsEnabled"
+  SACRIFICIAL_WEAPONS_ENABLED: "sacrificialWeaponsEnabled",
+  CRITICAL_DAMAGE_ENABLED: "criticalDamageEnabled",
+  ENCUMBRANCE_FATIGUE_ENABLED: "encumbranceFatigueEnabled"
 };
 export const HOOK_NAMES = {
   SKILL_ROLLER_CONTEXT: `${MODULE_ID}:skillRollerContext`,
   RESOLVE_WITHIN_REACH: `${MODULE_ID}:resolveWithinReach`,
-  REACH_STATUS_SETTING_CHANGED: `${MODULE_ID}:reachStatusSettingChanged`
+  REACH_STATUS_SETTING_CHANGED: `${MODULE_ID}:reachStatusSettingChanged`,
+  ENCUMBRANCE_FATIGUE_SETTING_CHANGED: `${MODULE_ID}:encumbranceFatigueSettingChanged`
 };
 
 export const LEGACY_REACH_STATUS_MODULE_ID = "conan2d20-reach-status";

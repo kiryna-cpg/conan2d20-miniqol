@@ -102,6 +102,25 @@ export function registerSettings() {
     default: true
   });
 
+  game.settings.register(MODULE_ID, SETTING_KEYS.CRITICAL_DAMAGE_ENABLED, {
+    name: game.i18n.localize("C2MQ.Setting.CriticalDamage.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.CriticalDamage.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register(MODULE_ID, SETTING_KEYS.ENCUMBRANCE_FATIGUE_ENABLED, {
+    name: game.i18n.localize("C2MQ.Setting.EncumbranceFatigue.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.EncumbranceFatigue.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => Hooks.callAll(HOOK_NAMES.ENCUMBRANCE_FATIGUE_SETTING_CHANGED)
+  });
+
   game.settings.register(MODULE_ID, SETTING_KEYS.DEBUG, {
     name: game.i18n.localize("C2MQ.Setting.Debug.Name"),
     hint: game.i18n.localize("C2MQ.Setting.Debug.Hint"),
@@ -112,11 +131,11 @@ export function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTING_KEYS.SACRIFICIAL_WEAPONS_ENABLED, {
-  name: game.i18n.localize("C2MQ.Setting.SacrificialWeapons.Name"),
-  hint: game.i18n.localize("C2MQ.Setting.SacrificialWeapons.Hint"),
-  scope: "world",
-  config: true,
-  type: Boolean,
-  default: false
-});
+    name: game.i18n.localize("C2MQ.Setting.SacrificialWeapons.Name"),
+    hint: game.i18n.localize("C2MQ.Setting.SacrificialWeapons.Hint"),
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
 }

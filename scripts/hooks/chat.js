@@ -1,4 +1,5 @@
 import { MODULE_ID, SETTING_KEYS, REACTION_KINDS, ATTACK_TYPES } from "../constants.js";
+import { resolvePersistentSoak } from "../adapter/conan2d20.js";
 import {
   requestRollDamage,
   requestRerollDamage,
@@ -587,8 +588,41 @@ function getCombatDieDisplay(face) {
   return n > 0 && n <= 2 ? String(n) : "&nbsp;";
 }
 
-function buildDamageEffectTags(damage = {}) {
+function getCriticalDamageExtraWounds(flags) {
+  if (flags?.criticalDamage?.active !== true) return 0;
+  return Math.max(0, Number(flags?.criticalDamage?.extraWounds ?? 0) || 0);
+}
+
+function decorateCriticalDamageOutcome(message, root, flags) {
+  if (!message || !root) return;
+  if (isStandaloneDamageCardMessage(message)) return;
+  if (!isSuccessfulRoll(message)) return;
+
+  const extraWounds = getCriticalDamageExtraWounds(flags);
+  if (extraWounds <= 0) return;
+
+  const successLabel = game.i18n.localize("CONAN.SkillRoll.Success.label").trim().toLowerCase();
+  const outcome =
+    root.querySelector(".message-content .success-or-failure.success") ??
+    Array.from(root.querySelectorAll(".message-content h2, .message-content h3, .message-content h4"))
+      .find((el) => String(el?.textContent ?? "").trim().toLowerCase() === successLabel) ??
+    null;
+
+  if (!outcome) return;
+
+  outcome.textContent = game.i18n.localize("C2MQ.CriticalDamage.AttackLabel");
+  outcome.classList.add("c2mq-critical-damage-outcome");
+}
+
+function buildDamageEffectTags(damage = {}, flags = {}) {
   const tags = [];
+
+  const criticalExtraWounds = getCriticalDamageExtraWounds(flags);
+  if (criticalExtraWounds > 0) {
+    tags.push({
+      label: game.i18n.format("C2MQ.Tag.CriticalDamage", { value: criticalExtraWounds })
+    });
+  }
 
   const piercing = Math.max(0, Number(damage.ignoreSoak ?? 0) || 0);
   if (piercing > 0) {
@@ -627,19 +661,69 @@ function buildHitLocationSummary(flags) {
   return uniqueLabels.join(" / ");
 }
 
+function normalizeDamageTypeForDisplay(flags) {
+  const raw = String(flags?.damage?.type ?? "physical").trim().toLowerCase();
+  return raw === "mental" ? "mental" : "physical";
+}
+
+const ARMOR_SOAK_LOCATIONS = [
+  { key: "head", labelKey: "CONAN.Item.Armor.Coverage.Head" },
+  { key: "torso", labelKey: "CONAN.Item.Armor.Coverage.Torso" },
+  { key: "rarm", labelKey: "CONAN.Item.Armor.Coverage.RightArm" },
+  { key: "larm", labelKey: "CONAN.Item.Armor.Coverage.LeftArm" },
+  { key: "rleg", labelKey: "CONAN.Item.Armor.Coverage.RightLeg" },
+  { key: "lleg", labelKey: "CONAN.Item.Armor.Coverage.LeftLeg" }
+];
+
+function getLocalizedArmorLocationLabel(locationKey) {
+  const entry = ARMOR_SOAK_LOCATIONS.find((loc) => loc.key === locationKey);
+  return entry ? game.i18n.localize(entry.labelKey) : game.i18n.localize("CONAN.Item.Armor.Coverage.Torso");
+}
+
+function buildTargetArmorSoakLabel(actor, flags, hitLocationKey = null) {
+  if (!actor) return "";
+
+  const damageType = normalizeDamageTypeForDisplay(flags);
+  if (damageType === "mental") {
+    const soak = resolvePersistentSoak(actor, { damageType: "mental" });
+    return game.i18n.format("C2MQ.Label.TargetMoraleSoak", { value: soak });
+  }
+
+  const flatNpc = foundry.utils.getProperty(actor, "system.armor");
+  if (typeof flatNpc === "number") {
+    return game.i18n.format("C2MQ.Label.TargetArmorSoak", { value: flatNpc });
+  }
+
+  if (hitLocationKey) {
+    const soak = resolvePersistentSoak(actor, { damageType: "physical", hitLocationKey });
+    return game.i18n.format("C2MQ.Label.TargetArmorSoakAtLocation", {
+      location: getLocalizedArmorLocationLabel(hitLocationKey),
+      value: soak
+    });
+  }
+
+  const parts = ARMOR_SOAK_LOCATIONS.map((loc) => {
+    const label = game.i18n.localize(loc.labelKey);
+    const soak = resolvePersistentSoak(actor, { damageType: "physical", hitLocationKey: loc.key });
+    return `${label} ${soak}`;
+  });
+
+  return game.i18n.format("C2MQ.Label.TargetArmorSoakSpread", {
+    values: parts.join(" · ")
+  });
+}
+
 function buildDamageDetailView(flags) {
   const damage = flags?.damage ?? {};
   const faces = Array.isArray(damage.faces) ? damage.faces : [];
-  const damageType = String(damage.type ?? "physical").trim().toLowerCase() === "mental"
-    ? "mental"
-    : "physical";
+  const damageType = normalizeDamageTypeForDisplay(flags);
 
   const dice = faces.map((face) => ({
     face: Number(face ?? 0) || 0,
     display: getCombatDieDisplay(face)
   }));
 
-  const effectTags = buildDamageEffectTags(damage);
+  const effectTags = buildDamageEffectTags(damage, flags);
   const hitLocationLabel = buildHitLocationSummary(flags);
 
   return {
@@ -766,6 +850,33 @@ function buildMomentumSpendView(message, flags, reaction, targetRows) {
       });
     }
 
+    if (plan.allocations?.changeStance?.applied === true) {
+      const stanceLabel = game.i18n.localize(plan.allocations.changeStance.toProne === true
+        ? "C2MQ.MomentumCommitted.ChangeStanceProne"
+        : "C2MQ.MomentumCommitted.ChangeStanceStanding");
+
+      rows.push({
+        cost: "1",
+        title: game.i18n.format("C2MQ.MomentumCommitted.ChangeStance", {
+          stance: stanceLabel
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.ChangeStance.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (plan.allocations?.secondWind?.recovered > 0) {
+      rows.push({
+        cost: String(Number(plan.allocations.secondWind.spent ?? plan.allocations.secondWind.recovered) || 0),
+        title: game.i18n.format("C2MQ.MomentumCommitted.SecondWind", {
+          capability: plan.allocations.secondWind.label ?? plan.allocations.secondWind.capability,
+          value: Number(plan.allocations.secondWind.recovered ?? 0) || 0
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.SecondWind.Detail"),
+        highlighted: true
+      });
+    }
+
     if (plan.allocations?.rerollDamage?.used === true) {
       rows.push({
         cost: "1",
@@ -782,6 +893,18 @@ function buildMomentumSpendView(message, flags, reaction, targetRows) {
           target: plan.allocations.breakGuard.targetName ?? "Target"
         }),
         detail: game.i18n.localize("C2MQ.MomentumSpend.BreakGuard.Detail"),
+        highlighted: true
+      });
+    }
+
+    if (plan.allocations?.disarm?.itemName) {
+      rows.push({
+        cost: String(Number(plan.allocations.disarm.spent ?? plan.allocations.disarm.cost ?? 0) || 0),
+        title: game.i18n.format("C2MQ.MomentumCommitted.Disarm", {
+          target: plan.allocations.disarm.targetName ?? "Target",
+          item: plan.allocations.disarm.itemName
+        }),
+        detail: game.i18n.localize("C2MQ.MomentumSpend.Disarm.Detail"),
         highlighted: true
       });
     }
@@ -828,7 +951,7 @@ function buildMomentumSpendView(message, flags, reaction, targetRows) {
     makeMomentumSpendRow("Disarm", { highlighted: hasSingleTarget && !isThreaten }),
     makeMomentumSpendRow("Penetration", { highlighted: isPhysical }),
     makeMomentumSpendRow("ReRollDamage", { highlighted: hasRolledDamage && hasDamageDice }),
-    makeMomentumSpendRow("SecondWind", { highlighted: false }),
+    makeMomentumSpendRow("SecondWind", { highlighted: true }),
     makeMomentumSpendRow("SecondaryTarget", { highlighted: targetRows.length > 1 }),
     makeMomentumSpendRow("Subdue", { highlighted: isPhysical }),
     makeMomentumSpendRow("SwiftAction", { highlighted: momentum >= 2 }),
@@ -863,6 +986,8 @@ async function injectMinQolBlock(message, root) {
     hitLocation: { byTarget: {} },
     damage: { rolled: false, total: null }
   };
+
+  decorateCriticalDamageOutcome(liveMessage, root, flags);
 
   const canOperateAttack = canUserOperateAttackMessage(liveMessage);
   const canApplyOperate =
@@ -946,6 +1071,7 @@ async function injectMinQolBlock(message, root) {
       hitLocationLabel: hit?.label
         ? `${game.i18n.localize("C2MQ.Label.HitLocation")}: ${hit.label}`
         : "",
+      armorSoakLabel: buildTargetArmorSoakLabel(actor, flags, hit?.key ?? null),
       guardStateLabel: (guardBroken || breakGuardApplied)
         ? game.i18n.localize("C2MQ.Status.NoGuard")
         : "",

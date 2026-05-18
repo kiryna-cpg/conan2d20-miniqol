@@ -18,7 +18,11 @@
       "MomentumSpends": "Momentum Spends",
       "NumberOfDice": "Number of Dice",
       "Effects": "Effects",
-      "MomentumCommittedSummary": "spent {spent}, banked {banked}"
+      "MomentumCommittedSummary": "spent {spent}, banked {banked}",
+      "TargetArmorSoak": "Armor: {value}",
+      "TargetArmorSoakAtLocation": "Armor ({location}): {value}",
+      "TargetArmorSoakSpread": "Armor: {values}",
+      "TargetMoraleSoak": "Courage: {value}"
     },
     "Button": {
       "RollDamage": "Roll Damage",
@@ -37,13 +41,16 @@
       "GoToDefenseRoll": "Go to Defense Roll",
       "GoToAttackRoll": "Go to Attack Roll",
       "ReRollDamage": "Re-roll Damage",
-      "Decline": "Decline"
+      "Decline": "Decline",
+      "NpcAttackUnequip": "Unequip NPC attack",
+      "NpcAttackEquip": "Equip NPC attack"
     },
     "Tag": {
       "Piercing": "Piercing {value}",
       "BonusDamage": "Bonus Damage +{value}",
       "Intense": "Intense",
-      "Nonlethal": "Nonlethal"
+      "Nonlethal": "Nonlethal",
+      "CriticalDamage": "Critical Damage (+{value} Wound)"
     },
     "DamageType": {
       "Physical": "Physical",
@@ -56,7 +63,12 @@
       "Banked": "Banked to {pool}",
       "BankedDetail": "This is the portion of generated Momentum that was banked after confirming the spend plan.",
       "BonusDamage": "Bonus Damage: +{value}",
-      "CalledShot": "Called Shot: {location}"
+      "CalledShot": "Called Shot: {location}",
+      "ChangeStance": "Change Stance: {stance}",
+      "ChangeStanceProne": "Prone",
+      "ChangeStanceStanding": "Standing",
+      "SecondWind": "Second Wind: {capability} +{value}",
+      "Disarm": "Disarm: {item} from {target}"
     },
     "MomentumSpend": {
       "BonusDamage": {
@@ -128,7 +140,9 @@
     "Status": {
       "Pending": "Damage Pending",
       "Applied": "Damage Applied",
-      "NoGuard": "Guard Broken"
+      "NoGuard": "Guard Broken",
+      "Incapacitated": "Incapacitated",
+      "IncapacitatedTooltip": "Vigor 0: cannot move or make skill checks."
     },
     "Warn": {
       "DamageSpecMissing": "Damage data not found on this item yet (v0.1).",
@@ -141,7 +155,13 @@
       "NoSacrificialCandidates": "No equipped, unbroken armor/shield/weapon found to sacrifice.",
       "MomentumActorMissing": "MiniQoL could not resolve the actor for this Momentum spend.",
       "MomentumAlreadyCommitted": "Momentum on this roll has already been spent or banked.",
-      "LegacyReachStatusActive": "The standalone Conan 2d20 - Reach Status module is active. MiniQoL Reach Status sync is disabled to avoid duplicate hooks."
+      "LegacyReachStatusActive": "The standalone Conan 2d20 - Reach Status module is active. MiniQoL Reach Status sync is disabled to avoid duplicate hooks.",
+      "ChangeStanceFailed": "MiniQoL could not apply the Prone status change.",
+      "SecondWindFailed": "MiniQoL could not apply Second Wind recovery.",
+      "DisarmTargetMissing": "MiniQoL could not find the disarm target or weapon.",
+      "DisarmFailed": "MiniQoL could not disarm the selected weapon.",
+      "IncapacitatedNoSkillCheck": "{name} is Incapacitated and cannot make skill checks.",
+      "IncapacitatedCannotMove": "{name} is Incapacitated and cannot move."
     },
     "Chat": {
       "ReactionUnavailableTitle": "Reaction Unavailable",
@@ -249,7 +269,14 @@
         "Preview": "Spend {spent}, Bank {banked}.",
         "ButtonConfirm": "Confirm",
         "CalledShot": "Called Shot (choose location, 2 Momentum)",
-        "NoCalledShot": "No Called Shot"
+        "NoCalledShot": "No Called Shot",
+        "ChangeStance": "Change Stance ({stance}, 1 Momentum)",
+        "ChangeStanceGoProne": "go prone",
+        "ChangeStanceStandUp": "stand up",
+        "SecondWind": "Second Wind (recover Stress)",
+        "SecondWindCapabilityState": "{capability} ({current}/{max})",
+        "Disarm": "Disarm weapon (2–3 Momentum)",
+        "NoDisarm": "Do not spend on Disarm"
       }
     },
     "Reach": {
@@ -313,6 +340,14 @@
       "ShowReach1Status": {
         "Name": "Show Reach 1 icon",
         "Hint": "If disabled, Reach 1 will not be applied automatically. Reach 2-3 and No Reach remain available."
+      },
+      "CriticalDamage": {
+        "Name": "Enable Critical Damage homebrew",
+        "Hint": "When enabled, a successful physical attack roll with a natural 1 adds one automatic Wound to the damage. Fortune and assist dice do not trigger this rider."
+      },
+      "EncumbranceFatigue": {
+        "Name": "Encumbrance as Fatigue",
+        "Hint": "When enabled, carried Encumbrance is automatically added as Fatigue and reduces maximum Vigor. Disable this to restore only manually tracked Fatigue."
       }
     },
     "ReachStatus": {
@@ -328,6 +363,9 @@
         "Reach3": "Automatic Reach 3 status.",
         "NoReach": "Manual override that suppresses automatic Reach."
       }
+    },
+    "CriticalDamage": {
+      "AttackLabel": "Success with Critical Damage"
     }
   }
 }
